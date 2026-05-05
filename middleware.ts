@@ -7,11 +7,11 @@ export const middleware = withAuth(
   },
   {
     pages: {
-      signIn: "/login",
+      signIn: "/",
     },
   },
 );
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/api/protected/:path*"],
+  matcher: ["/dashboard/:path*", "/api/:path*"],
 };
