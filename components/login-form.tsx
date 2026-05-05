@@ -98,7 +98,6 @@ export function LoginForm({
             {isLoading ? "Entrando..." : "Entrar"}
           </Button>
         </Field>
-        uil
       </FieldGroup>
     </form>
   );
