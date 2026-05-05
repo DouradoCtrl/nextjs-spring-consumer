@@ -15,7 +15,7 @@ export function SidebarHeaderLogo() {
   return (
     <SidebarMenu>
       <SidebarMenuItem>
-        <SidebarMenuButton size="lg" asChild>
+        <SidebarMenuButton size="lg">
           <Link href="/dashboard">
             <div className="flex items-center gap-3">
               <div className="shrink-0 rounded-lg bg-black p-1">
