@@ -5,13 +5,7 @@ import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import {
-  Field,
-  FieldDescription,
-  FieldGroup,
-  FieldLabel,
-  FieldSeparator,
-} from "@/components/ui/field";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 
 export function LoginForm({
@@ -104,6 +98,7 @@ export function LoginForm({
             {isLoading ? "Entrando..." : "Entrar"}
           </Button>
         </Field>
+        uil
       </FieldGroup>
     </form>
   );
