@@ -16,7 +16,7 @@ export function SidebarHeaderLogo() {
     <SidebarMenu>
       <SidebarMenuItem>
         <SidebarMenuButton size="lg">
-          <Link href="/dashboard">
+          <Link href="/">
             <div className="flex items-center gap-3">
               <div className="shrink-0 rounded-lg bg-blue-800 p-1">
                 <Image src="/logo.svg" alt="Logo" width={24} height={24} />
