@@ -21,7 +21,13 @@ export const authOptions: NextAuthOptions = {
         });
 
         const userResponse = await res.json();
-        if (res.ok && userResponse?.user && userResponse?.token) {
+
+        if (
+          res.ok &&
+          userResponse?.user &&
+          userResponse?.token &&
+          userResponse?.user.enabled
+        ) {
           return {
             ...userResponse.user,
             token: userResponse.token,
