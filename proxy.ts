@@ -7,11 +7,11 @@ export const proxy = withAuth(
   },
   {
     pages: {
-      signIn: "/",
+      signIn: "/login",
     },
   },
 );
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/api/:path*"],
+  matcher: ["/", "/(dashboard|google-ads)/:path*", "/api/:path*"],
 };
