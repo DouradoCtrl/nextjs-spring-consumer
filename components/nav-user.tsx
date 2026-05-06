@@ -83,7 +83,9 @@ export function NavUser() {
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => signOut({ callbackUrl: "/" })}>
+            <DropdownMenuItem
+              onClick={() => signOut({ callbackUrl: "/login" })}
+            >
               <LogOutIcon />
               Sair
             </DropdownMenuItem>
