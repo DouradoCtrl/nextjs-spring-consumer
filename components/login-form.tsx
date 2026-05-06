@@ -33,7 +33,7 @@ export function LoginForm({
       if (result?.error) {
         setError("Email ou senha inválidos");
       } else if (result?.ok) {
-        router.push("/dashboard");
+        router.push("/");
       }
     } catch (err) {
       setError("Erro ao fazer login. Tente novamente.");
