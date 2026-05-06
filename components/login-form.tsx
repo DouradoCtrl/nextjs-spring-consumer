@@ -31,7 +31,9 @@ export function LoginForm({
       });
 
       if (result?.error) {
-        setError("Email ou senha inválidos");
+        setError(
+          "Email ou senha inválidos ou conta desativada. Verifique e tente novamente.",
+        );
       } else if (result?.ok) {
         router.push("/");
       }
