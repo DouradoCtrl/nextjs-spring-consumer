@@ -11,33 +11,35 @@ import {
 } from "@/components/ui/breadcrumb";
 import React from "react";
 
+const titleMap: Record<string, string> = {
+  "google-ads": "Google Ads",
+  "google-analytics": "Google Analytics",
+  "meta-ads": "Meta Ads",
+  "users-management": "Gerenciamento de Usuários",
+};
+
 export function DynamicBreadcrumbs() {
   const pathname = usePathname();
-  // Removemos o "dashboard" da lista de segmentos se ele for apenas a base da URL
   const segments = pathname.split("/").filter(Boolean);
-
-  // Verifica se estamos na página inicial do sistema (raiz)
   const isHome = segments.length === 0;
 
   return (
     <Breadcrumb>
       <BreadcrumbList>
         <BreadcrumbItem>
-          {/* Se estiver na home, fica branco (Page). Se não, fica link. */}
           {isHome ? (
             <BreadcrumbPage>Dashboard</BreadcrumbPage>
           ) : (
             <BreadcrumbLink href="/">Dashboard</BreadcrumbLink>
           )}
         </BreadcrumbItem>
-
         {segments.map((segment, index) => {
           const href = `/${segments.slice(0, index + 1).join("/")}`;
           const isLast = index === segments.length - 1;
-
           const title =
+            titleMap[segment] ||
             segment.replace(/-/g, " ").charAt(0).toUpperCase() +
-            segment.slice(1);
+              segment.slice(1);
 
           return (
             <React.Fragment key={href}>
