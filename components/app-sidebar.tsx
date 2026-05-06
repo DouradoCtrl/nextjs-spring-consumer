@@ -13,33 +13,52 @@ import {
   SidebarHeader,
   SidebarRail,
 } from "@/components/ui/sidebar";
-import { FrameIcon, PieChartIcon, MapIcon } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import {
+  FrameIcon,
+  PieChartIcon,
+  MapIcon,
+  UsersRound,
+  LayoutDashboard,
+  ChartColumnBig,
+} from "lucide-react";
 
-// This is sample data.
 const data = {
-  navMain: [
-    {
-      title: "Geral",
-      url: "#",
-      icon: <FrameIcon />,
-    },
-    {
-      title: "Google Ads",
-      url: "#",
-      // icon: <PieChartIcon />
-      icon: <PieChartIcon />,
-    },
-    {
-      title: "Google Analytics",
-      url: "#",
-      icon: <MapIcon />,
-    },
-    {
-      title: "Meta Ads",
-      url: "#",
-      icon: <PieChartIcon />,
-    },
-  ],
+  dashboards: {
+    label: "Dashboards",
+    items: [
+      {
+        title: "Geral",
+        url: "#",
+        icon: <LayoutDashboard />,
+      },
+      {
+        title: "Google Ads",
+        url: "#",
+        icon: <PieChartIcon />,
+      },
+      {
+        title: "Google Analytics",
+        url: "#",
+        icon: <MapIcon />,
+      },
+      {
+        title: "Meta Ads",
+        url: "#",
+        icon: <ChartColumnBig />,
+      },
+    ],
+  },
+  management: {
+    label: "Administração",
+    items: [
+      {
+        title: "Gerenciamento de Usuários",
+        url: "#",
+        icon: <UsersRound />,
+      },
+    ],
+  },
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
@@ -49,7 +68,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarHeaderLogo />
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
+        <NavMain items={data.dashboards.items} label={data.management.label} />
+        <Separator />
+        <NavMain items={data.management.items} label={data.management.label} />
       </SidebarContent>
       <SidebarFooter>
         <NavUser />
