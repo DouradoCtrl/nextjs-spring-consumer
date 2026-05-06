@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useSession } from "next-auth/react";
 
 import { NavMain } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
@@ -60,15 +61,25 @@ const data = {
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === "ADMIN";
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
         <SidebarHeaderLogo />
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.dashboards.items} label={data.management.label} />
-        <Separator />
-        <NavMain items={data.management.items} label={data.management.label} />
+        <NavMain items={data.dashboards.items} label={data.dashboards.label} />
+        {isAdmin && (
+          <>
+            <Separator />
+            <NavMain
+              items={data.management.items}
+              label={data.management.label}
+            />
+          </>
+        )}
       </SidebarContent>
       <SidebarFooter>
         <NavUser />
