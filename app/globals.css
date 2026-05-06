@@ -21,9 +21,9 @@ body {
     "Noto Color Emoji";
 }
 
-html {
+/* html {
   font-size: 110%;
-}
+} */
 
 @custom-variant dark (&:is(.dark *));
 
