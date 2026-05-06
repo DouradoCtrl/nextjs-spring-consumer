@@ -53,7 +53,7 @@ const data = {
     items: [
       {
         title: "Gerenciamento de Usuários",
-        url: "#",
+        url: "/users-management",
         icon: <UsersRound />,
       },
     ],
