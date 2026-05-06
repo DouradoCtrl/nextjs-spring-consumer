@@ -1,9 +1,18 @@
 import { withAuth } from "next-auth/middleware";
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 export const proxy = withAuth(
   function proxy(req: NextRequest) {
-    return;
+    const token = req.nextauth.token;
+
+    // Proteger rotas de administração
+    if (req.nextUrl.pathname.startsWith("/users-management")) {
+      if (token?.role !== "ADMIN") {
+        return NextResponse.redirect(new URL("/", req.url));
+      }
+    }
+
+    return NextResponse.next();
   },
   {
     pages: {
@@ -13,5 +22,9 @@ export const proxy = withAuth(
 );
 
 export const config = {
-  matcher: ["/", "/(dashboard|google-ads)/:path*", "/api/:path*"],
+  matcher: [
+    "/",
+    "/(google-ads|users-management|google-analytics|meta-ads)/:path*",
+    "/api/:path*",
+  ],
 };
