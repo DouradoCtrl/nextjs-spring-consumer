@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-import Image from "next/image";
+import Link from "next/link";
 import { NavMain } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
 import { SidebarHeaderLogo } from "@/components/SidebarHeaderLogo";
@@ -15,7 +15,6 @@ import {
 } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 import {
-  FrameIcon,
   PieChartIcon,
   MapIcon,
   UsersRound,
@@ -29,22 +28,22 @@ const data = {
     items: [
       {
         title: "Geral",
-        url: "#",
+        url: "/",
         icon: <LayoutDashboard />,
       },
       {
         title: "Google Ads",
-        url: "#",
+        url: "/google-ads",
         icon: <PieChartIcon />,
       },
       {
         title: "Google Analytics",
-        url: "#",
+        url: "/google-analytics",
         icon: <MapIcon />,
       },
       {
         title: "Meta Ads",
-        url: "#",
+        url: "/meta-ads",
         icon: <ChartColumnBig />,
       },
     ],
