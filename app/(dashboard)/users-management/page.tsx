@@ -1,8 +1,6 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useEffect, useState } from "react";
-import {ShieldCheck, ShieldClose, Pencil, Trash2, CircleX, CircleCheck} from "lucide-react";
 import {
   Table,
   TableBody,
@@ -12,26 +10,41 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useEffect, useState } from "react";
+import {
+  CircleCheck,
+  CircleX,
+  Pencil,
+  ShieldCheck,
+  ShieldClose,
+  Trash2,
+} from "lucide-react";
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  username: string;
+  role: "ADMIN" | "USER";
+  enabled: boolean;
+}
 
 export default function Page() {
   const { data: session } = useSession();
-  const [users, setUsers] = useState([]);
+  const [users, setUsers] = useState<User[]>([]); // 2. Tipar o estado
 
   useEffect(() => {
-    const token = session?.accessToken;
-    const url = `${process.env.NEXT_PUBLIC_API_URL}/users/all`;
-
-    if (token) {
-      fetch(url, {
-        headers: { Authorization: `Bearer ${token}` },
+    if (session?.accessToken) {
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/all`, {
+        headers: { Authorization: `Bearer ${session.accessToken}` },
       })
         .then((res) => res.json())
         .then(setUsers);
     }
-  }, [session]);
+  }, [session?.accessToken]); // 3. Usar uma dependência mais específica
 
   return (
     <div className="p-4">
@@ -49,12 +62,9 @@ export default function Page() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {users.map((user: any, index: number) => (
+            {users.map((user, index) => (
               <TableRow key={user.id}>
-                <TableCell className="text-center">
-                  {/*  Fazer contador*/}
-                  { index + 1}
-                </TableCell>
+                <TableCell className="text-center">{index + 1}</TableCell>
                 <TableCell>{user.name}</TableCell>
                 <TableCell>{user.email}</TableCell>
                 <TableCell>
@@ -62,21 +72,29 @@ export default function Page() {
                 </TableCell>
                 <TableCell className="text-center">
                   <div className="flex justify-center">
-                    {user.role == "ADMIN" ? <ShieldCheck className="h-5 w-5 text-green-500" /> : <ShieldClose className="h-5 w-5 text-red-500" /> }
+                    {user.role === "ADMIN" ? (
+                      <ShieldCheck className="h-5 w-5 text-green-500" />
+                    ) : (
+                      <ShieldClose className="h-5 w-5 text-red-500" />
+                    )}
                   </div>
                 </TableCell>
                 <TableCell className="text-center">
                   <div className="flex justify-center">
-                    {user.enabled ? <CircleCheck className="h-5 w-5 text-green-500" /> : <CircleX className="h-5 w-5 text-red-500" />}
+                    {user.enabled ? (
+                      <CircleCheck className="h-5 w-5 text-green-500" />
+                    ) : (
+                      <CircleX className="h-5 w-5 text-red-500" />
+                    )}
                   </div>
                 </TableCell>
                 <TableCell>
-                  <div className="flex justify-center">
-                    <Button>
-                      <Pencil className="h-5 w-5"/>
+                  <div className="flex justify-center gap-2">
+                    <Button size="icon" variant="outline">
+                      <Pencil className="h-4 w-4" />
                     </Button>
-                    <Button className="ml-1 bg-red-800 text-white">
-                      <Trash2 className="h-5 w-5"/>
+                    <Button size="icon" variant="destructive">
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </TableCell>
