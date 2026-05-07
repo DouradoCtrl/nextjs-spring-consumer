@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   SidebarGroup,
   SidebarGroupLabel,
@@ -32,7 +33,7 @@ export function NavMain({
           <SidebarMenuItem key={item.title}>
             <SidebarMenuButton
               tooltip={item.title}
-              render={<a href={item.url} />}
+              render={<Link href={item.url} />}
             >
               {item.icon}
               <span>{item.title}</span>
