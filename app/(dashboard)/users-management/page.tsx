@@ -2,7 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
-import { ShieldCheck, ShieldClose, Pencil, Trash2 } from "lucide-react";
+import {ShieldCheck, ShieldClose, Pencil, Trash2, CircleX, CircleCheck} from "lucide-react";
 import {
   Table,
   TableBody,
@@ -14,6 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 export default function Page() {
   const { data: session } = useSession();
@@ -38,36 +39,46 @@ export default function Page() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[100px]">#</TableHead>
+              <TableHead className="text-center">#</TableHead>
               <TableHead>Nome</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Usuário</TableHead>
-              <TableHead>Nível de Acesso</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Ações</TableHead>
+              <TableHead className="text-center">Administrador</TableHead>
+              <TableHead className="text-center">Status</TableHead>
+              <TableHead className="text-center">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {users.map((user: any, index: number) => (
               <TableRow key={user.id}>
-                <TableCell>
+                <TableCell className="text-center">
                   {/*  Fazer contador*/}
                   { index + 1}
                 </TableCell>
                 <TableCell>{user.name}</TableCell>
                 <TableCell>{user.email}</TableCell>
-                <TableCell>{user.username}</TableCell>
-                <TableCell>{user.role == "ADMIN" ? "Administrador" : "Usuário" }</TableCell>
                 <TableCell>
-                  {user.enabled ? <ShieldCheck className="h-5 w-5" /> : <ShieldClose className="h-5 w-5" />}
+                  <Badge>{user.username}</Badge>
+                </TableCell>
+                <TableCell className="text-center">
+                  <div className="flex justify-center">
+                    {user.role == "ADMIN" ? <ShieldCheck className="h-5 w-5 text-green-500" /> : <ShieldClose className="h-5 w-5 text-red-500" /> }
+                  </div>
+                </TableCell>
+                <TableCell className="text-center">
+                  <div className="flex justify-center">
+                    {user.enabled ? <CircleCheck className="h-5 w-5 text-green-500" /> : <CircleX className="h-5 w-5 text-red-500" />}
+                  </div>
                 </TableCell>
                 <TableCell>
-                  <Button>
-                    <Pencil className="h-5 w-5"/>
-                  </Button>
-                  <Button>
-                    <Trash2 className="h-5 w-5"/>
-                  </Button>
+                  <div className="flex justify-center">
+                    <Button>
+                      <Pencil className="h-5 w-5"/>
+                    </Button>
+                    <Button className="ml-1 bg-red-800 text-white">
+                      <Trash2 className="h-5 w-5"/>
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
