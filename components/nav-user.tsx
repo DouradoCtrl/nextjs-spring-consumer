@@ -18,16 +18,24 @@ import {
 } from "@/components/ui/sidebar";
 import { ChevronsUpDownIcon, LogOutIcon, UserRoundPen } from "lucide-react";
 import { useSession, signOut } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 export function NavUser() {
   const { data: session } = useSession();
   const { isMobile } = useSidebar();
+  const router = useRouter();
 
   // Usuário de auth.ts
   const user = {
     name: session?.user?.name || "Carregando...",
     email: session?.user?.email || "",
+    // @ts-ignore
     username: session?.user?.username || "",
+  };
+
+  const handleSignOut = async () => {
+    await signOut({ redirect: false });
+    router.push("/login");
   };
 
   return (
@@ -83,9 +91,7 @@ export function NavUser() {
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => signOut({ callbackUrl: "/login" })}
-            >
+            <DropdownMenuItem onClick={handleSignOut}>
               <LogOutIcon />
               Sair
             </DropdownMenuItem>
