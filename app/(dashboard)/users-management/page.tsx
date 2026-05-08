@@ -4,9 +4,7 @@ import { useSession } from "next-auth/react";
 import {
   Table,
   TableBody,
-  TableCaption,
   TableCell,
-  TableFooter,
   TableHead,
   TableHeader,
   TableRow,
