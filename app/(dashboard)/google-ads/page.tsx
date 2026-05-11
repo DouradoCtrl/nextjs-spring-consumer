@@ -3,7 +3,7 @@
 import { Header } from "@/components/header";
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,7 +16,6 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-  TableFooter,
 } from "@/components/ui/table";
 import { CircleCheck, CirclePause, Search, LayoutList, CheckCircle2, PauseCircle, MousePointerClick, Eye, DollarSign, Activity } from "lucide-react";
 import { QuickFilters } from "@/components/quick-filters";
@@ -164,7 +163,7 @@ export default function Page() {
       <Header>
           <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto py-1 max-w-full no-scrollbar">
             <div className="ml-2 text-xs font-medium text-muted-foreground flex items-center bg-muted/50 px-3 py-1.5 rounded-md border whitespace-nowrap shrink-0">
-              {startDate ? format(startDate, "dd/MM/yyyy") : "--"} a {endDate ? format(endDate, "dd/MM/yyyy") : "--"}
+              {startDate && endDate ? `${format(startDate, "dd/MM/yyyy")} a ${format(endDate, "dd/MM/yyyy")}` : "Todo o Período"}
             </div>
             <QuickFilters onDateChange={handleDateChange} />
               <AdvancedFilters 
