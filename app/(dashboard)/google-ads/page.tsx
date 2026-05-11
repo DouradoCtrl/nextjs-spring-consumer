@@ -16,7 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { CircleCheck, CirclePause, Search } from "lucide-react";
+import { CircleCheck, CirclePause, Search, LayoutList, CheckCircle2, PauseCircle } from "lucide-react";
 
 interface Campaign {
   resourceName: string;
@@ -81,13 +81,19 @@ export default function Page() {
         <div className="grid auto-rows-min gap-4 md:grid-cols-3">
           <Card>
             <CardHeader className="pb-2">
-              <CardDescription>Total de Campanhas</CardDescription>
+              <CardDescription className="flex items-center gap-2">
+                <LayoutList className="h-4 w-4 text-muted-foreground" />
+                Total de Campanhas
+              </CardDescription>
               <CardTitle className="text-4xl">{loading ? <Skeleton className="h-10 w-16" /> : campaigns.length}</CardTitle>
             </CardHeader>
           </Card>
           <Card>
             <CardHeader className="pb-2">
-              <CardDescription>Campanhas Ativas</CardDescription>
+              <CardDescription className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-500" />
+                Campanhas Ativas
+              </CardDescription>
               <CardTitle className="text-4xl text-green-600 dark:text-green-500">
                 {loading ? <Skeleton className="h-10 w-16" /> : activeCampaigns}
               </CardTitle>
@@ -95,7 +101,10 @@ export default function Page() {
           </Card>
           <Card>
             <CardHeader className="pb-2">
-              <CardDescription>Campanhas Pausadas</CardDescription>
+              <CardDescription className="flex items-center gap-2">
+                <PauseCircle className="h-4 w-4 text-yellow-600 dark:text-yellow-500" />
+                Campanhas Pausadas
+              </CardDescription>
               <CardTitle className="text-4xl text-yellow-600 dark:text-yellow-500">
                 {loading ? <Skeleton className="h-10 w-16" /> : pausedCampaigns}
               </CardTitle>
