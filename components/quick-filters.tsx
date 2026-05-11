@@ -22,7 +22,7 @@ import {
 } from "date-fns";
 
 interface QuickFiltersProps {
-  onDateChange: (startDate: Date, endDate: Date) => void;
+  onDateChange: (startDate: Date | null, endDate: Date | null) => void;
 }
 
 export function QuickFilters({ onDateChange }: QuickFiltersProps) {
@@ -30,6 +30,9 @@ export function QuickFilters({ onDateChange }: QuickFiltersProps) {
     const todayDate = new Date();
     
     switch (preset) {
+      case "allTime":
+        onDateChange(null, null);
+        break;
       case "today":
         onDateChange(todayDate, todayDate);
         break;
@@ -104,6 +107,10 @@ export function QuickFilters({ onDateChange }: QuickFiltersProps) {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
+        <DropdownMenuLabel>Geral</DropdownMenuLabel>
+        <DropdownMenuItem onClick={() => handlePresetChange("allTime")}>Todo o Período</DropdownMenuItem>
+        
+        <DropdownMenuSeparator />
         <DropdownMenuLabel>Dias</DropdownMenuLabel>
         <DropdownMenuItem onClick={() => handlePresetChange("today")}>Hoje</DropdownMenuItem>
         <DropdownMenuItem onClick={() => handlePresetChange("yesterday")}>Ontem</DropdownMenuItem>
