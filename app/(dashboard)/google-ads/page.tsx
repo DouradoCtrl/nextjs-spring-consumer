@@ -7,6 +7,7 @@ import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/ca
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import Link from "next/link";
 import {
   Table,
   TableBody,
@@ -157,9 +158,11 @@ export default function Page() {
                         </TableCell>
                         <TableCell>
                         <div className="flex justify-center">
-                            <Button size="sm" variant="outline" className="h-8 gap-1.5" onClick={() => console.log('Ver detalhes', result.campaign.id)}>
-                            <Search className="h-3.5 w-3.5" />
-                            <span>Detalhes</span>
+                            <Button size="sm" variant="outline" className="h-8 gap-1.5" asChild>
+                              <Link href={`/google-ads/${result.campaign.id}`}>
+                                <Search className="h-3.5 w-3.5" />
+                                <span>Detalhes</span>
+                              </Link>
                             </Button>
                         </div>
                         </TableCell>
