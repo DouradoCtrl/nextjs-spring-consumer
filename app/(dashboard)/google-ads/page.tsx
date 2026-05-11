@@ -3,11 +3,12 @@
 import { Header } from "@/components/header";
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
+import { format } from "date-fns";
 import {
   Table,
   TableBody,
@@ -15,8 +16,11 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableFooter,
 } from "@/components/ui/table";
-import { CircleCheck, CirclePause, Search, LayoutList, CheckCircle2, PauseCircle } from "lucide-react";
+import { CircleCheck, CirclePause, Search, LayoutList, CheckCircle2, PauseCircle, MousePointerClick, Eye, DollarSign, Activity } from "lucide-react";
+import { QuickFilters } from "@/components/quick-filters";
+import { AdvancedFilters } from "@/components/advanced-filters";
 
 interface Campaign {
   resourceName: string;
@@ -25,8 +29,20 @@ interface Campaign {
   status: string;
 }
 
+interface Metrics {
+  clicks?: string | number;
+  impressions?: string | number;
+  averageCpc?: string | number;
+  costMicros?: string | number;
+}
+
 interface CampaignResult {
   campaign: Campaign;
+  metrics?: Metrics;
+}
+
+interface CustomerResult {
+  metrics: Metrics;
 }
 
 interface GoogleAdsResponse {
@@ -35,15 +51,43 @@ interface GoogleAdsResponse {
   queryResourceConsumption?: string;
 }
 
+interface GoogleAdsCustomerResponse {
+  results: CustomerResult[];
+}
+
+const formatCurrency = (micros?: string | number) => {
+  if (!micros) return "R$ 0,00";
+  const val = Number(micros) / 1000000;
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
+};
+
+const formatNumber = (num?: string | number) => {
+  if (!num) return "0";
+  return new Intl.NumberFormat('pt-BR').format(Number(num));
+};
+
 export default function Page() {
   const { data: session } = useSession();
   const [campaigns, setCampaigns] = useState<CampaignResult[]>([]);
   const [loading, setLoading] = useState(true);
+  const [generalMetrics, setGeneralMetrics] = useState<Metrics | null>(null);
+  const [loadingMetrics, setLoadingMetrics] = useState(true);
+
+  const [startDate, setStartDate] = useState<Date | null>(null);
+  const [endDate, setEndDate] = useState<Date | null>(null);
 
   useEffect(() => {
     const accessToken = (session as any)?.accessToken;
     if (accessToken) {
       setLoading(true);
+
+      let dateFilter = "";
+      if (startDate && endDate) {
+        const startStr = format(startDate, "yyyy-MM-dd");
+        const endStr = format(endDate, "yyyy-MM-dd");
+        dateFilter = ` AND segments.date BETWEEN '${startStr}' AND '${endStr}'`;
+      }
+
       fetch(`${process.env.NEXT_PUBLIC_API_URL}/google-ads/search`, {
         method: "POST",
         headers: {
@@ -51,21 +95,52 @@ export default function Page() {
           Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
-          query: "SELECT campaign.id, campaign.name, campaign.status FROM campaign",
+          query: `SELECT campaign.id, campaign.name, campaign.status, metrics.clicks, metrics.impressions, metrics.average_cpc, metrics.cost_micros FROM campaign WHERE campaign.status != 'REMOVED'${dateFilter}`,
         }),
       })
         .then((res) => res.json())
         .then((data: GoogleAdsResponse) => {
           if (data.results) {
             setCampaigns(data.results);
+          } else {
+            setCampaigns([]);
           }
         })
         .catch((error) => console.error("Erro ao buscar campanhas:", error))
         .finally(() => setLoading(false));
+
+      setLoadingMetrics(true);
+      
+      let customerQuery = "SELECT metrics.clicks, metrics.impressions, metrics.average_cpc, metrics.cost_micros FROM customer";
+      if (dateFilter) {
+          customerQuery = `SELECT metrics.clicks, metrics.impressions, metrics.average_cpc, metrics.cost_micros FROM customer WHERE segments.date BETWEEN '${format(startDate!, "yyyy-MM-dd")}' AND '${format(endDate!, "yyyy-MM-dd")}'`;
+      }
+
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/google-ads/search`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          query: customerQuery,
+        }),
+      })
+        .then((res) => res.json())
+        .then((data: GoogleAdsCustomerResponse) => {
+          if (data.results && data.results.length > 0) {
+            setGeneralMetrics(data.results[0].metrics);
+          } else {
+            setGeneralMetrics(null);
+          }
+        })
+        .catch((error) => console.error("Erro ao buscar métricas gerais:", error))
+        .finally(() => setLoadingMetrics(false));
     } else if (session === null) {
       setLoading(false);
+      setLoadingMetrics(false);
     }
-  }, [session]);
+  }, [session, startDate, endDate]);
 
   const activeCampaigns = campaigns.filter(
     (c) => c.campaign.status === "ENABLED"
@@ -74,10 +149,81 @@ export default function Page() {
     (c) => c.campaign.status === "PAUSED"
   ).length;
 
+  const handleDateChange = (start: Date | null, end: Date | null) => {
+    setStartDate(start);
+    setEndDate(end);
+  };
+
+  const handleAdvancedFilterApply = (start: Date, end: Date) => {
+    setStartDate(start);
+    setEndDate(end);
+  };
+
   return (
     <div className="flex flex-1 flex-col">
-      <Header />
+      <Header>
+          <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto py-1 max-w-full no-scrollbar">
+            <div className="ml-2 text-xs font-medium text-muted-foreground flex items-center bg-muted/50 px-3 py-1.5 rounded-md border whitespace-nowrap shrink-0">
+              {startDate ? format(startDate, "dd/MM/yyyy") : "--"} a {endDate ? format(endDate, "dd/MM/yyyy") : "--"}
+            </div>
+            <QuickFilters onDateChange={handleDateChange} />
+              <AdvancedFilters 
+                initialStartDate={startDate || undefined} 
+                initialEndDate={endDate || undefined} 
+                onApply={handleAdvancedFilterApply} 
+              />
+          </div>
+      </Header>
       <div className="flex flex-1 flex-col p-4 md:p-6 lg:p-8 gap-6">
+        
+        {/* Métricas Gerais (Conta) */}
+        <div className="grid auto-rows-min gap-4 md:grid-cols-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription className="flex items-center gap-2">
+                <MousePointerClick className="h-4 w-4 text-blue-600 dark:text-blue-500" />
+                Total de Cliques
+              </CardDescription>
+              <CardTitle className="text-3xl">
+                {loadingMetrics ? <Skeleton className="h-8 w-24" /> : formatNumber(generalMetrics?.clicks)}
+              </CardTitle>
+            </CardHeader>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription className="flex items-center gap-2">
+                <Eye className="h-4 w-4 text-purple-600 dark:text-purple-500" />
+                Total de Impressões
+              </CardDescription>
+              <CardTitle className="text-3xl">
+                {loadingMetrics ? <Skeleton className="h-8 w-24" /> : formatNumber(generalMetrics?.impressions)}
+              </CardTitle>
+            </CardHeader>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription className="flex items-center gap-2">
+                <Activity className="h-4 w-4 text-orange-600 dark:text-orange-500" />
+                CPC Médio Geral
+              </CardDescription>
+              <CardTitle className="text-3xl">
+                {loadingMetrics ? <Skeleton className="h-8 w-24" /> : formatCurrency(generalMetrics?.averageCpc)}
+              </CardTitle>
+            </CardHeader>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription className="flex items-center gap-2">
+                <DollarSign className="h-4 w-4 text-emerald-600 dark:text-emerald-500" />
+                Custo Total
+              </CardDescription>
+              <CardTitle className="text-3xl">
+                {loadingMetrics ? <Skeleton className="h-8 w-24" /> : formatCurrency(generalMetrics?.costMicros)}
+              </CardTitle>
+            </CardHeader>
+          </Card>
+        </div>
+
         <div className="grid auto-rows-min gap-4 md:grid-cols-3">
           <Card>
             <CardHeader className="pb-2">
@@ -85,7 +231,7 @@ export default function Page() {
                 <LayoutList className="h-4 w-4 text-muted-foreground" />
                 Total de Campanhas
               </CardDescription>
-              <CardTitle className="text-4xl">{loading ? <Skeleton className="h-10 w-16" /> : campaigns.length}</CardTitle>
+              <CardTitle className="text-3xl">{loading ? <Skeleton className="h-8 w-16" /> : campaigns.length}</CardTitle>
             </CardHeader>
           </Card>
           <Card>
@@ -94,8 +240,8 @@ export default function Page() {
                 <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-500" />
                 Campanhas Ativas
               </CardDescription>
-              <CardTitle className="text-4xl text-green-600 dark:text-green-500">
-                {loading ? <Skeleton className="h-10 w-16" /> : activeCampaigns}
+              <CardTitle className="text-3xl text-green-600 dark:text-green-500">
+                {loading ? <Skeleton className="h-8 w-16" /> : activeCampaigns}
               </CardTitle>
             </CardHeader>
           </Card>
@@ -105,8 +251,8 @@ export default function Page() {
                 <PauseCircle className="h-4 w-4 text-yellow-600 dark:text-yellow-500" />
                 Campanhas Pausadas
               </CardDescription>
-              <CardTitle className="text-4xl text-yellow-600 dark:text-yellow-500">
-                {loading ? <Skeleton className="h-10 w-16" /> : pausedCampaigns}
+              <CardTitle className="text-3xl text-yellow-600 dark:text-yellow-500">
+                {loading ? <Skeleton className="h-8 w-16" /> : pausedCampaigns}
               </CardTitle>
             </CardHeader>
           </Card>
@@ -120,13 +266,17 @@ export default function Page() {
                   <TableHead>Nome</TableHead>
                   <TableHead>ID</TableHead>
                   <TableHead className="text-center">Status</TableHead>
+                  <TableHead className="text-right">Cliques</TableHead>
+                  <TableHead className="text-right">Impressões</TableHead>
+                  <TableHead className="text-right">CPC Médio</TableHead>
+                  <TableHead className="text-right">Custo</TableHead>
                   <TableHead className="text-center">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                     <TableRow>
-                        <TableCell colSpan={5} className="h-24 text-center">
+                        <TableCell colSpan={9} className="h-24 text-center">
                             <div className="flex justify-center items-center h-full space-x-2">
                                 <Skeleton className="h-8 w-full max-w-125" />
                             </div>
@@ -134,7 +284,7 @@ export default function Page() {
                     </TableRow>
                 ) : campaigns.length === 0 ? (
                     <TableRow>
-                        <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                        <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
                             Nenhuma campanha encontrada.
                         </TableCell>
                     </TableRow>
@@ -164,6 +314,18 @@ export default function Page() {
                                     <span className="text-xs font-medium text-muted-foreground">{result.campaign.status}</span>
                                 )}
                             </div>
+                        </TableCell>
+                        <TableCell className="text-right font-medium">
+                            {formatNumber(result.metrics?.clicks)}
+                        </TableCell>
+                        <TableCell className="text-right font-medium">
+                            {formatNumber(result.metrics?.impressions)}
+                        </TableCell>
+                        <TableCell className="text-right font-medium text-muted-foreground">
+                            {formatCurrency(result.metrics?.averageCpc)}
+                        </TableCell>
+                        <TableCell className="text-right font-medium text-muted-foreground">
+                            {formatCurrency(result.metrics?.costMicros)}
                         </TableCell>
                         <TableCell>
                         <div className="flex justify-center">
