@@ -20,17 +20,13 @@ import { cn } from "@/lib/utils";
 import { QuickFilters } from "@/components/quick-filters";
 import { AdvancedFilters } from "@/components/advanced-filters";
 
-// --- Tipagens (Interfaces) ---
-
 interface PageProps {
   params: Promise<{ id: string }>;
 }
 
 interface Campaign {
-  resourceName: string;
   status: string;
   name: string;
-  id: string;
 }
 
 interface Metrics {
@@ -42,32 +38,26 @@ interface Metrics {
 }
 
 interface Segments {
-  month: string;
+  month?: string;
 }
 
 interface CampaignResult {
   campaign: Campaign;
-  metrics: Metrics;
-  segments: Segments;
+  metrics?: Metrics;
+  segments?: Segments;
 }
 
 interface GoogleAdsResponse {
   results?: CampaignResult[];
-  fieldMask?: string;
-  queryResourceConsumption?: string;
 }
 
 export default function CampaignDetailsPage({ params }: PageProps) {
   const { id } = use(params);
   const { data: session } = useSession();
 
-  // Formatando data atual e primeiro dia do mês para valores padrão
-  const today = new Date();
-  const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-
-  // Estados dos filtros principais
-  const [startDate, setStartDate] = useState<Date | undefined>(firstDay);
-  const [endDate, setEndDate] = useState<Date | undefined>(today);
+  // Estados dos filtros principais - null indica todo o período por padrão
+  const [startDate, setStartDate] = useState<Date | null>(null);
+  const [endDate, setEndDate] = useState<Date | null>(null);
 
   // Estados de dados
   const [loading, setLoading] = useState<boolean>(true);
@@ -82,44 +72,69 @@ export default function CampaignDetailsPage({ params }: PageProps) {
     setLoading(true);
 
     try {
-      const queryStartDate = startDate ? format(startDate, "yyyy-MM-dd") : format(firstDay, "yyyy-MM-dd");
-      const queryEndDate = endDate ? format(endDate, "yyyy-MM-dd") : format(today, "yyyy-MM-dd");
-
-      const query = `SELECT campaign.id, campaign.name, campaign.status, segments.month, metrics.clicks, metrics.average_cpc, metrics.cost_per_conversion, metrics.conversions, metrics.cost_micros FROM campaign WHERE campaign.id = ${id} AND segments.date >= '${queryStartDate}' AND segments.date <= '${queryEndDate}' ORDER BY segments.month DESC`;
-
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/google-ads/search`, {
+      // 1. Busca primeiro as informações básicas da campanha sem segmentos 
+      // Isso garante que o nome e status sempre vão aparecer, mesmo que não haja métricas no período
+      const infoQuery = `SELECT campaign.id, campaign.name, campaign.status FROM campaign WHERE campaign.id = ${id}`;
+      const infoResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/google-ads/search`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${accessToken}`,
         },
-        body: JSON.stringify({ query }),
+        body: JSON.stringify({ query: infoQuery }),
       });
-
-      if (!response.ok) {
-        throw new Error(`Erro na API: ${response.status}`);
+      const infoData = await infoResponse.json();
+      if (infoData.results && infoData.results.length > 0) {
+        setCampaignInfo(infoData.results[0].campaign);
       }
 
-      const data: GoogleAdsResponse = await response.json();
+      // 2. Configura a query de métricas segmentada por mês
+      let dateFilter: string;
+      if (startDate && endDate) {
+        const startStr = format(startDate, "yyyy-MM-dd");
+        const endStr = format(endDate, "yyyy-MM-dd");
+        dateFilter = ` AND segments.date BETWEEN '${startStr}' AND '${endStr}'`;
+      } else {
+        // A API do Google Ads OBRIGA a ter um filtro de data no WHERE quando estamos 
+        // usando a coluna segments.month. Para "Todo o período", colocamos um intervalo abrangente.
+        const todayStr = format(new Date(), "yyyy-MM-dd");
+        dateFilter = ` AND segments.date BETWEEN '2010-01-01' AND '${todayStr}'`;
+      }
 
-      if (data.results && data.results.length > 0) {
-        setResults(data.results);
-        // O nome da campanha é igual em todos os meses
-        setCampaignInfo(data.results[0].campaign);
+      const metricsQuery = `SELECT campaign.id, segments.month, metrics.clicks, metrics.average_cpc, metrics.cost_per_conversion, metrics.conversions, metrics.cost_micros FROM campaign WHERE campaign.id = ${id}${dateFilter} ORDER BY segments.month DESC`;
+
+      const metricsResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/google-ads/search`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ query: metricsQuery }),
+      });
+
+      if (!metricsResponse.ok) {
+        throw new Error(`Erro na API: ${metricsResponse.status}`);
+      }
+
+      const metricsData: GoogleAdsResponse = await metricsResponse.json();
+
+      if (metricsData.results && metricsData.results.length > 0) {
+        setResults(metricsData.results);
       } else {
         setResults([]);
       }
     } catch (error) {
       console.error("Erro ao buscar detalhes da campanha:", error);
+      setResults([]);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    // Carrega a primeira vez quando a sessão estiver disponível, e sempre que as datas mudarem
     if ((session as any)?.accessToken) {
-      fetchCampaignDetails();
+      // Ignorando intencionalmente a promise retornada
+      void fetchCampaignDetails();
     } else if (session === null) {
       setLoading(false);
     }
@@ -127,16 +142,18 @@ export default function CampaignDetailsPage({ params }: PageProps) {
   }, [id, session, startDate, endDate]);
 
   // Totais agregados
-  const totalClicks = results.reduce((acc, curr) => acc + Number(curr.metrics.clicks || 0), 0);
-  const totalConversions = results.reduce((acc, curr) => acc + (curr.metrics.conversions || 0), 0);
-  const totalCostMicros = results.reduce((acc, curr) => acc + Number(curr.metrics.costMicros || 0), 0);
+  const totalClicks = results.reduce((acc, curr) => acc + Number(curr.metrics?.clicks || 0), 0);
+  const totalConversions = results.reduce((acc, curr) => acc + (curr.metrics?.conversions || 0), 0);
+  const totalCostMicros = results.reduce((acc, curr) => acc + Number(curr.metrics?.costMicros || 0), 0);
 
-  const formatCurrency = (micros: number) => {
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(micros / 1000000);
+  const formatCurrency = (micros?: number | string) => {
+    if (!micros) return "R$ 0,00";
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(micros) / 1000000);
   };
 
-  const formatNumber = (num: number) => {
-    return new Intl.NumberFormat('pt-BR').format(num);
+  const formatNumber = (num?: number | string) => {
+    if (!num) return "0";
+    return new Intl.NumberFormat('pt-BR').format(Number(num));
   };
 
   // Auxiliares para Status
@@ -163,7 +180,7 @@ export default function CampaignDetailsPage({ params }: PageProps) {
         <Header>
           <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto py-1 max-w-full no-scrollbar">
             <div className="ml-2 text-xs font-medium text-muted-foreground flex items-center bg-muted/50 px-3 py-1.5 rounded-md border whitespace-nowrap shrink-0">
-              {startDate ? format(startDate, "dd/MM/yyyy") : "--"} a {endDate ? format(endDate, "dd/MM/yyyy") : "--"}
+              {startDate && endDate ? `${format(startDate, "dd/MM/yyyy")} a ${format(endDate, "dd/MM/yyyy")}` : "Todo o Período"}
             </div>
 
             <QuickFilters
@@ -174,8 +191,8 @@ export default function CampaignDetailsPage({ params }: PageProps) {
             />
 
             <AdvancedFilters
-                initialStartDate={startDate}
-                initialEndDate={endDate}
+                initialStartDate={startDate || undefined}
+                initialEndDate={endDate || undefined}
                 onApply={(start, end) => {
                   setStartDate(start);
                   setEndDate(end);
@@ -275,29 +292,29 @@ export default function CampaignDetailsPage({ params }: PageProps) {
                 ) : results.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
-                        Nenhum dado encontrado para este período.
+                        Nenhum dado de métrica encontrado para este período.
                       </TableCell>
                     </TableRow>
                 ) : (
                     results.map((result, index) => (
                         <TableRow key={index}>
                           <TableCell className="font-medium">
-                            {result.segments.month}
+                            {result.segments?.month}
                           </TableCell>
                           <TableCell className="text-right text-muted-foreground">
-                            {formatNumber(Number(result.metrics.clicks || 0))}
+                            {formatNumber(Number(result.metrics?.clicks || 0))}
                           </TableCell>
                           <TableCell className="text-right text-emerald-600 font-medium">
-                            {result.metrics.conversions ? result.metrics.conversions.toFixed(2) : "0"}
+                            {result.metrics?.conversions ? result.metrics.conversions.toFixed(2) : "0"}
                           </TableCell>
                           <TableCell className="text-right text-muted-foreground">
-                            {result.metrics.costPerConversion ? formatCurrency(result.metrics.costPerConversion) : "-"}
+                            {result.metrics?.costPerConversion ? formatCurrency(result.metrics.costPerConversion) : "-"}
                           </TableCell>
                           <TableCell className="text-right text-muted-foreground">
-                            {result.metrics.averageCpc ? formatCurrency(result.metrics.averageCpc) : "-"}
+                            {result.metrics?.averageCpc ? formatCurrency(result.metrics.averageCpc) : "-"}
                           </TableCell>
                           <TableCell className="text-right font-medium text-purple-600">
-                            {formatCurrency(Number(result.metrics.costMicros || 0))}
+                            {formatCurrency(Number(result.metrics?.costMicros || 0))}
                           </TableCell>
                         </TableRow>
                     ))
