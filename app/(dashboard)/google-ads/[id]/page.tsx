@@ -13,6 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { MousePointerClick, Target, DollarSign } from "lucide-react";
 
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -59,7 +60,7 @@ interface GoogleAdsResponse {
 export default function CampaignDetailsPage({ params }: PageProps) {
   const { id } = use(params);
   const { data: session } = useSession();
-  
+
   // Formatando data atual e primeiro dia do mês para valores padrão
   const today = new Date();
   const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -67,7 +68,7 @@ export default function CampaignDetailsPage({ params }: PageProps) {
   // Estados dos filtros principais
   const [startDate, setStartDate] = useState<Date | undefined>(firstDay);
   const [endDate, setEndDate] = useState<Date | undefined>(today);
-  
+
   // Estados de dados
   const [loading, setLoading] = useState<boolean>(true);
   const [results, setResults] = useState<CampaignResult[]>([]);
@@ -75,17 +76,17 @@ export default function CampaignDetailsPage({ params }: PageProps) {
 
   const fetchCampaignDetails = async () => {
     const accessToken = (session as { accessToken?: string })?.accessToken;
-    
+
     if (!accessToken || !id) return;
-    
+
     setLoading(true);
-    
+
     try {
       const queryStartDate = startDate ? format(startDate, "yyyy-MM-dd") : format(firstDay, "yyyy-MM-dd");
       const queryEndDate = endDate ? format(endDate, "yyyy-MM-dd") : format(today, "yyyy-MM-dd");
 
       const query = `SELECT campaign.id, campaign.name, campaign.status, segments.month, metrics.clicks, metrics.average_cpc, metrics.cost_per_conversion, metrics.conversions, metrics.cost_micros FROM campaign WHERE campaign.id = ${id} AND segments.date >= '${queryStartDate}' AND segments.date <= '${queryEndDate}' ORDER BY segments.month DESC`;
-      
+
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/google-ads/search`, {
         method: "POST",
         headers: {
@@ -100,7 +101,7 @@ export default function CampaignDetailsPage({ params }: PageProps) {
       }
 
       const data: GoogleAdsResponse = await response.json();
-      
+
       if (data.results && data.results.length > 0) {
         setResults(data.results);
         // O nome da campanha é igual em todos os meses
@@ -122,14 +123,14 @@ export default function CampaignDetailsPage({ params }: PageProps) {
     } else if (session === null) {
       setLoading(false);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, session, startDate, endDate]);
 
   // Totais agregados
   const totalClicks = results.reduce((acc, curr) => acc + Number(curr.metrics.clicks || 0), 0);
   const totalConversions = results.reduce((acc, curr) => acc + (curr.metrics.conversions || 0), 0);
   const totalCostMicros = results.reduce((acc, curr) => acc + Number(curr.metrics.costMicros || 0), 0);
-  
+
   const formatCurrency = (micros: number) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(micros / 1000000);
   };
@@ -158,145 +159,153 @@ export default function CampaignDetailsPage({ params }: PageProps) {
   };
 
   return (
-    <div className="flex flex-1 flex-col h-full bg-muted/20">
-      <Header>
-        <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1 max-w-full no-scrollbar">
-          
-          <QuickFilters 
-            onDateChange={(start, end) => {
-              setStartDate(start);
-              setEndDate(end);
-            }} 
-          />
+      <div className="flex flex-1 flex-col h-full bg-muted/20">
+        <Header>
+          <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1 max-w-full no-scrollbar">
+            <div className="ml-2 text-xs font-medium text-muted-foreground flex items-center bg-muted/50 px-3 py-1.5 rounded-md border whitespace-nowrap shrink-0">
+              {startDate ? format(startDate, "dd/MM/yyyy") : "--"} a {endDate ? format(endDate, "dd/MM/yyyy") : "--"}
+            </div>
 
-          <AdvancedFilters 
-            initialStartDate={startDate}
-            initialEndDate={endDate}
-            onApply={(start, end) => {
-              setStartDate(start);
-              setEndDate(end);
-            }}
-          />
+            <QuickFilters
+                onDateChange={(start, end) => {
+                  setStartDate(start);
+                  setEndDate(end);
+                }}
+            />
 
-          <div className="ml-2 text-xs font-medium text-muted-foreground flex items-center bg-muted/50 px-3 py-1.5 rounded-md border whitespace-nowrap shrink-0">
-             {startDate ? format(startDate, "dd/MM/yyyy") : "--"} a {endDate ? format(endDate, "dd/MM/yyyy") : "--"}
+            <AdvancedFilters
+                initialStartDate={startDate}
+                initialEndDate={endDate}
+                onApply={(start, end) => {
+                  setStartDate(start);
+                  setEndDate(end);
+                }}
+            />
+
           </div>
+        </Header>
 
-        </div>
-      </Header>
+        <div className="flex flex-1 flex-col p-4 md:p-6 lg:p-8 gap-6">
 
-      <div className="flex flex-1 flex-col p-4 md:p-6 lg:p-8 gap-6">
-        
-        {/* Cabeçalho da página (Título) */}
-        <div className="flex flex-col gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">
-              {loading && !campaignInfo ? (
-                <Skeleton className="h-9 w-64" />
-              ) : (
-                campaignInfo?.name || "Campanha não encontrada"
-              )}
-            </h1>
-            <p className="text-muted-foreground mt-2 flex items-center gap-2">
-              ID: {id}
-              {campaignInfo?.status && (
-                <span className={cn(
-                  "inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset",
-                  getStatusColor(campaignInfo.status)
-                )}>
+          {/* Cabeçalho da página (Título) */}
+          <div className="flex flex-col gap-4">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">
+                {loading && !campaignInfo ? (
+                    <Skeleton className="h-9 w-64" />
+                ) : (
+                    campaignInfo?.name || "Campanha não encontrada"
+                )}
+              </h1>
+              <p className="text-muted-foreground mt-2 flex items-center gap-2">
+                ID: {id}
+                {campaignInfo?.status && (
+                    <span className={cn(
+                        "inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset",
+                        getStatusColor(campaignInfo.status)
+                    )}>
                   {getStatusText(campaignInfo.status)}
                 </span>
-              )}
-            </p>
+                )}
+              </p>
+            </div>
+          </div>
+
+          {/* Cards de Resumo (Totais) */}
+          <div className="grid auto-rows-min gap-4 md:grid-cols-3 mt-2">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardDescription className="flex items-center gap-2 font-medium">
+                  <MousePointerClick className="h-4 w-4 text-muted-foreground" />
+                  Total de Cliques
+                </CardDescription>
+                <CardTitle className="text-4xl text-blue-600 dark:text-blue-500">
+                  {loading ? <Skeleton className="h-10 w-16" /> : formatNumber(totalClicks)}
+                </CardTitle>
+              </CardHeader>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardDescription className="flex items-center gap-2 font-medium">
+                  <Target className="h-4 w-4 text-emerald-600 dark:text-emerald-500" />
+                  Total de Conversões
+                </CardDescription>
+                <CardTitle className="text-4xl text-emerald-600 dark:text-emerald-500">
+                  {loading ? <Skeleton className="h-10 w-24" /> : formatNumber(Number(totalConversions.toFixed(2)))}
+                </CardTitle>
+              </CardHeader>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardDescription className="flex items-center gap-2 font-medium">
+                  <DollarSign className="h-4 w-4 text-purple-600 dark:text-purple-500" />
+                  Custo Total
+                </CardDescription>
+                <CardTitle className="text-4xl text-purple-600 dark:text-purple-500">
+                  {loading ? <Skeleton className="h-10 w-32" /> : formatCurrency(totalCostMicros)}
+                </CardTitle>
+              </CardHeader>
+            </Card>
+          </div>
+
+          {/* Tabela de Desempenho por Mês */}
+          <div className="rounded-xl border bg-card text-card-foreground shadow-sm overflow-hidden mt-2">
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent bg-muted/50">
+                  <TableHead>Mês</TableHead>
+                  <TableHead className="text-right">Cliques</TableHead>
+                  <TableHead className="text-right">Conversões</TableHead>
+                  <TableHead className="text-right">Custo / Conversão</TableHead>
+                  <TableHead className="text-right">CPC Médio</TableHead>
+                  <TableHead className="text-right">Custo</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="h-32 text-center">
+                        <div className="flex justify-center items-center h-full">
+                          <span className="text-muted-foreground animate-pulse">Carregando métricas...</span>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                ) : results.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
+                        Nenhum dado encontrado para este período.
+                      </TableCell>
+                    </TableRow>
+                ) : (
+                    results.map((result, index) => (
+                        <TableRow key={index}>
+                          <TableCell className="font-medium">
+                            {result.segments.month}
+                          </TableCell>
+                          <TableCell className="text-right text-muted-foreground">
+                            {formatNumber(Number(result.metrics.clicks || 0))}
+                          </TableCell>
+                          <TableCell className="text-right text-emerald-600 font-medium">
+                            {result.metrics.conversions ? result.metrics.conversions.toFixed(2) : "0"}
+                          </TableCell>
+                          <TableCell className="text-right text-muted-foreground">
+                            {result.metrics.costPerConversion ? formatCurrency(result.metrics.costPerConversion) : "-"}
+                          </TableCell>
+                          <TableCell className="text-right text-muted-foreground">
+                            {result.metrics.averageCpc ? formatCurrency(result.metrics.averageCpc) : "-"}
+                          </TableCell>
+                          <TableCell className="text-right font-medium text-purple-600">
+                            {formatCurrency(Number(result.metrics.costMicros || 0))}
+                          </TableCell>
+                        </TableRow>
+                    ))
+                )}
+              </TableBody>
+            </Table>
           </div>
         </div>
-        
-        {/* Cards de Resumo (Totais) */}
-        <div className="grid auto-rows-min gap-4 md:grid-cols-3 mt-2">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription className="font-medium">Total de Cliques</CardDescription>
-              <CardTitle className="text-4xl text-blue-600 dark:text-blue-500">
-                {loading ? <Skeleton className="h-10 w-16" /> : formatNumber(totalClicks)}
-              </CardTitle>
-            </CardHeader>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription className="font-medium">Total de Conversões</CardDescription>
-              <CardTitle className="text-4xl text-emerald-600 dark:text-emerald-500">
-                {loading ? <Skeleton className="h-10 w-24" /> : formatNumber(Number(totalConversions.toFixed(2)))}
-              </CardTitle>
-            </CardHeader>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription className="font-medium">Custo Total</CardDescription>
-              <CardTitle className="text-4xl text-purple-600 dark:text-purple-500">
-                {loading ? <Skeleton className="h-10 w-32" /> : formatCurrency(totalCostMicros)}
-              </CardTitle>
-            </CardHeader>
-          </Card>
-        </div>
-
-        {/* Tabela de Desempenho por Mês */}
-        <div className="rounded-xl border bg-card text-card-foreground shadow-sm overflow-hidden mt-2">
-          <Table>
-            <TableHeader>
-              <TableRow className="hover:bg-transparent bg-muted/50">
-                <TableHead>Mês</TableHead>
-                <TableHead className="text-right">Cliques</TableHead>
-                <TableHead className="text-right">Conversões</TableHead>
-                <TableHead className="text-right">Custo / Conversão</TableHead>
-                <TableHead className="text-right">CPC Médio</TableHead>
-                <TableHead className="text-right">Custo</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="h-32 text-center">
-                    <div className="flex justify-center items-center h-full">
-                      <span className="text-muted-foreground animate-pulse">Carregando métricas...</span>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : results.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
-                    Nenhum dado encontrado para este período.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                results.map((result, index) => (
-                  <TableRow key={index}>
-                    <TableCell className="font-medium">
-                      {result.segments.month}
-                    </TableCell>
-                    <TableCell className="text-right text-muted-foreground">
-                      {formatNumber(Number(result.metrics.clicks || 0))}
-                    </TableCell>
-                    <TableCell className="text-right text-emerald-600 font-medium">
-                      {result.metrics.conversions ? result.metrics.conversions.toFixed(2) : "0"}
-                    </TableCell>
-                    <TableCell className="text-right text-muted-foreground">
-                      {result.metrics.costPerConversion ? formatCurrency(result.metrics.costPerConversion) : "-"}
-                    </TableCell>
-                    <TableCell className="text-right text-muted-foreground">
-                      {result.metrics.averageCpc ? formatCurrency(result.metrics.averageCpc) : "-"}
-                    </TableCell>
-                    <TableCell className="text-right font-medium text-purple-600">
-                      {formatCurrency(Number(result.metrics.costMicros || 0))}
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
       </div>
-    </div>
   );
 }
