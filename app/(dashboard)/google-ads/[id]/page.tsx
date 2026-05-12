@@ -13,7 +13,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { MousePointerClick, Target, DollarSign } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { MousePointerClick, Target, DollarSign, Eye, Percent, Activity, TrendingUp, Info } from "lucide-react";
 
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -30,11 +39,12 @@ interface Campaign {
 }
 
 interface Metrics {
-  clicks?: string;
-  conversions?: number;
-  costMicros?: string;
+  clicks?: string | number;
+  conversions?: string | number;
+  costMicros?: string | number;
   costPerConversion?: number;
   averageCpc?: number;
+  impressions?: string | number;
 }
 
 interface Segments {
@@ -60,20 +70,17 @@ export default function CampaignDetailsPage({ params }: PageProps) {
   const [endDate, setEndDate] = useState<Date | null>(null);
 
   // Estados de dados
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loadingInfo, setLoadingInfo] = useState<boolean>(true);
+  const [loadingMetrics, setLoadingMetrics] = useState<boolean>(true);
   const [results, setResults] = useState<CampaignResult[]>([]);
   const [campaignInfo, setCampaignInfo] = useState<Campaign | null>(null);
 
-  const fetchCampaignDetails = async () => {
+  const fetchCampaignInfo = async () => {
     const accessToken = (session as { accessToken?: string })?.accessToken;
-
     if (!accessToken || !id) return;
 
-    setLoading(true);
-
+    setLoadingInfo(true);
     try {
-      // 1. Busca primeiro as informações básicas da campanha sem segmentos 
-      // Isso garante que o nome e status sempre vão aparecer, mesmo que não haja métricas no período
       const infoQuery = `SELECT campaign.id, campaign.name, campaign.status FROM campaign WHERE campaign.id = ${id}`;
       const infoResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/google-ads/search`, {
         method: "POST",
@@ -87,21 +94,31 @@ export default function CampaignDetailsPage({ params }: PageProps) {
       if (infoData.results && infoData.results.length > 0) {
         setCampaignInfo(infoData.results[0].campaign);
       }
+    } catch (error) {
+      console.error("Erro ao buscar info da campanha:", error);
+    } finally {
+      setLoadingInfo(false);
+    }
+  };
 
-      // 2. Configura a query de métricas segmentada por mês
+  const fetchCampaignMetrics = async () => {
+    const accessToken = (session as { accessToken?: string })?.accessToken;
+    if (!accessToken || !id) return;
+
+    setLoadingMetrics(true);
+    try {
       let dateFilter: string;
       if (startDate && endDate) {
         const startStr = format(startDate, "yyyy-MM-dd");
         const endStr = format(endDate, "yyyy-MM-dd");
         dateFilter = ` AND segments.date BETWEEN '${startStr}' AND '${endStr}'`;
       } else {
-        // A API do Google Ads OBRIGA a ter um filtro de data no WHERE quando estamos 
-        // usando a coluna segments.month. Para "Todo o período", colocamos um intervalo abrangente.
         const todayStr = format(new Date(), "yyyy-MM-dd");
         dateFilter = ` AND segments.date BETWEEN '2010-01-01' AND '${todayStr}'`;
       }
 
-      const metricsQuery = `SELECT campaign.id, segments.month, metrics.clicks, metrics.average_cpc, metrics.cost_per_conversion, metrics.conversions, metrics.cost_micros FROM campaign WHERE campaign.id = ${id}${dateFilter} ORDER BY segments.month DESC`;
+      // Removidos fields metrics.ctr e metrics.average_cpm para evitar erro 400 e calculados no frontend
+      const metricsQuery = `SELECT campaign.id, segments.month, metrics.clicks, metrics.impressions, metrics.average_cpc, metrics.conversions, metrics.cost_per_conversion, metrics.cost_micros FROM campaign WHERE campaign.id = ${id} ${dateFilter} ORDER BY segments.month DESC`;
 
       const metricsResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/google-ads/search`, {
         method: "POST",
@@ -124,27 +141,45 @@ export default function CampaignDetailsPage({ params }: PageProps) {
         setResults([]);
       }
     } catch (error) {
-      console.error("Erro ao buscar detalhes da campanha:", error);
+      console.error("Erro ao buscar métricas da campanha:", error);
       setResults([]);
     } finally {
-      setLoading(false);
+      setLoadingMetrics(false);
     }
   };
 
   useEffect(() => {
     if ((session as any)?.accessToken) {
-      // Ignorando intencionalmente a promise retornada
-      void fetchCampaignDetails();
+      void fetchCampaignInfo();
     } else if (session === null) {
-      setLoading(false);
+      setLoadingInfo(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, session]);
+
+  useEffect(() => {
+    if ((session as any)?.accessToken) {
+      void fetchCampaignMetrics();
+    } else if (session === null) {
+      setLoadingMetrics(false);
+    }
   }, [id, session, startDate, endDate]);
 
-  // Totais agregados
-  const totalClicks = results.reduce((acc, curr) => acc + Number(curr.metrics?.clicks || 0), 0);
-  const totalConversions = results.reduce((acc, curr) => acc + (curr.metrics?.conversions || 0), 0);
-  const totalCostMicros = results.reduce((acc, curr) => acc + Number(curr.metrics?.costMicros || 0), 0);
+  // Totais agregados (Single Pass)
+  let totalClicks = 0;
+  let totalConversions = 0;
+  let totalCostMicros = 0;
+  let totalImpressions = 0;
+
+  for (const result of results) {
+    totalClicks += Number(result.metrics?.clicks || 0);
+    totalConversions += Number(result.metrics?.conversions || 0);
+    totalCostMicros += Number(result.metrics?.costMicros || 0);
+    totalImpressions += Number(result.metrics?.impressions || 0);
+  }
+
+  const avgCtr = totalImpressions > 0 ? totalClicks / totalImpressions : 0;
+  const avgCpm = totalImpressions > 0 ? (totalCostMicros / totalImpressions) * 1000 : 0;
+  const cplGeral = totalConversions > 0 ? totalCostMicros / totalConversions : 0;
 
   const formatCurrency = (micros?: number | string) => {
     if (!micros) return "R$ 0,00";
@@ -154,6 +189,11 @@ export default function CampaignDetailsPage({ params }: PageProps) {
   const formatNumber = (num?: number | string) => {
     if (!num) return "0";
     return new Intl.NumberFormat('pt-BR').format(Number(num));
+  };
+
+  const formatPercent = (val?: number | string) => {
+    if (val === undefined || val === null) return "0,00%";
+    return new Intl.NumberFormat('pt-BR', { style: 'percent', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(val));
   };
 
   // Auxiliares para Status
@@ -208,7 +248,7 @@ export default function CampaignDetailsPage({ params }: PageProps) {
           <div className="flex flex-col gap-4">
             <div>
               <h1 className="text-3xl font-bold tracking-tight">
-                {loading && !campaignInfo ? (
+                {loadingInfo && !campaignInfo ? (
                     <Skeleton className="h-9 w-64" />
                 ) : (
                     campaignInfo?.name || "Campanha não encontrada"
@@ -229,15 +269,15 @@ export default function CampaignDetailsPage({ params }: PageProps) {
           </div>
 
           {/* Cards de Resumo (Totais) */}
-          <div className="grid auto-rows-min gap-4 md:grid-cols-3 mt-2">
+          <div className="grid auto-rows-min gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4 mt-2">
             <Card>
               <CardHeader className="pb-2">
                 <CardDescription className="flex items-center gap-2 font-medium">
-                  <MousePointerClick className="h-4 w-4 text-muted-foreground" />
-                  Total de Cliques
+                  <Eye className="h-4 w-4 text-orange-500" />
+                  Total de Impressões
                 </CardDescription>
-                <CardTitle className="text-4xl text-blue-600 dark:text-blue-500">
-                  {loading ? <Skeleton className="h-10 w-16" /> : formatNumber(totalClicks)}
+                <CardTitle className="text-4xl text-orange-600 dark:text-orange-500">
+                  {loadingMetrics ? <Skeleton className="h-10 w-24" /> : formatNumber(totalImpressions)}
                 </CardTitle>
               </CardHeader>
             </Card>
@@ -245,11 +285,60 @@ export default function CampaignDetailsPage({ params }: PageProps) {
             <Card>
               <CardHeader className="pb-2">
                 <CardDescription className="flex items-center gap-2 font-medium">
+                  <MousePointerClick className="h-4 w-4 text-muted-foreground" />
+                  Total de Cliques
+                </CardDescription>
+                <CardTitle className="text-4xl text-blue-600 dark:text-blue-500">
+                  {loadingMetrics ? <Skeleton className="h-10 w-16" /> : formatNumber(totalClicks)}
+                </CardTitle>
+              </CardHeader>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardDescription className="flex items-center gap-2 font-medium">
+                  <Percent className="h-4 w-4 text-cyan-500" />
+                  CTR Médio
+                </CardDescription>
+                <CardTitle className="text-4xl text-cyan-600 dark:text-cyan-500">
+                  {loadingMetrics ? <Skeleton className="h-10 w-24" /> : formatPercent(avgCtr)}
+                </CardTitle>
+              </CardHeader>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardDescription className="flex items-center gap-2 font-medium">
+                  <Activity className="h-4 w-4 text-indigo-500" />
+                  CPM Médio
+                </CardDescription>
+                <CardTitle className="text-4xl text-indigo-600 dark:text-indigo-500">
+                  {loadingMetrics ? <Skeleton className="h-10 w-24" /> : formatCurrency(avgCpm)}
+                </CardTitle>
+              </CardHeader>
+            </Card>
+          </div>
+          <div className="grid auto-rows-min gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mt-2">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardDescription className="flex items-center gap-2 font-medium">
                   <Target className="h-4 w-4 text-emerald-600 dark:text-emerald-500" />
                   Total de Conversões
                 </CardDescription>
                 <CardTitle className="text-4xl text-emerald-600 dark:text-emerald-500">
-                  {loading ? <Skeleton className="h-10 w-24" /> : formatNumber(Number(totalConversions.toFixed(2)))}
+                  {loadingMetrics ? <Skeleton className="h-10 w-24" /> : formatNumber(Number(totalConversions.toFixed(2)))}
+                </CardTitle>
+              </CardHeader>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardDescription className="flex items-center gap-2 font-medium">
+                  <TrendingUp className="h-4 w-4 text-rose-500" />
+                  CPL Médio (CPA)
+                </CardDescription>
+                <CardTitle className="text-4xl text-rose-600 dark:text-rose-500">
+                  {loadingMetrics ? <Skeleton className="h-10 w-24" /> : formatCurrency(cplGeral)}
                 </CardTitle>
               </CardHeader>
             </Card>
@@ -261,27 +350,27 @@ export default function CampaignDetailsPage({ params }: PageProps) {
                   Custo Total
                 </CardDescription>
                 <CardTitle className="text-4xl text-purple-600 dark:text-purple-500">
-                  {loading ? <Skeleton className="h-10 w-32" /> : formatCurrency(totalCostMicros)}
+                  {loadingMetrics ? <Skeleton className="h-10 w-32" /> : formatCurrency(totalCostMicros)}
                 </CardTitle>
               </CardHeader>
             </Card>
           </div>
 
-          {/* Tabela de Desempenho por Mês */}
+          {/* Tabela de Desempenho por Mês (Visão Resumida) */}
           <div className="rounded-xl border bg-card text-card-foreground shadow-sm overflow-hidden mt-2">
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent bg-muted/50">
                   <TableHead>Mês</TableHead>
+                  <TableHead className="text-right">Impressões</TableHead>
                   <TableHead className="text-right">Cliques</TableHead>
                   <TableHead className="text-right">Conversões</TableHead>
-                  <TableHead className="text-right">Custo / Conversão</TableHead>
-                  <TableHead className="text-right">CPC Médio</TableHead>
                   <TableHead className="text-right">Custo</TableHead>
+                  <TableHead className="text-center w-[100px]">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {loading ? (
+                {loadingMetrics ? (
                     <TableRow>
                       <TableCell colSpan={6} className="h-32 text-center">
                         <div className="flex justify-center items-center h-full">
@@ -296,28 +385,89 @@ export default function CampaignDetailsPage({ params }: PageProps) {
                       </TableCell>
                     </TableRow>
                 ) : (
-                    results.map((result, index) => (
-                        <TableRow key={index}>
-                          <TableCell className="font-medium">
-                            {result.segments?.month}
-                          </TableCell>
-                          <TableCell className="text-right text-muted-foreground">
-                            {formatNumber(Number(result.metrics?.clicks || 0))}
-                          </TableCell>
-                          <TableCell className="text-right text-emerald-600 font-medium">
-                            {result.metrics?.conversions ? result.metrics.conversions.toFixed(2) : "0"}
-                          </TableCell>
-                          <TableCell className="text-right text-muted-foreground">
-                            {result.metrics?.costPerConversion ? formatCurrency(result.metrics.costPerConversion) : "-"}
-                          </TableCell>
-                          <TableCell className="text-right text-muted-foreground">
-                            {result.metrics?.averageCpc ? formatCurrency(result.metrics.averageCpc) : "-"}
-                          </TableCell>
-                          <TableCell className="text-right font-medium text-purple-600">
-                            {formatCurrency(Number(result.metrics?.costMicros || 0))}
-                          </TableCell>
-                        </TableRow>
-                    ))
+                    results.map((result, index) => {
+                      const conversions = Number(result.metrics?.conversions || 0);
+                      const costPerConversionValid = conversions > 0 && result.metrics?.costPerConversion != null;
+                      
+                      const rowClicks = Number(result.metrics?.clicks || 0);
+                      const rowImpressions = Number(result.metrics?.impressions || 0);
+                      const rowCostMicros = Number(result.metrics?.costMicros || 0);
+                      
+                      const rowCtr = rowImpressions > 0 ? rowClicks / rowImpressions : 0;
+                      const rowCpm = rowImpressions > 0 ? (rowCostMicros / rowImpressions) * 1000 : 0;
+
+                      return (
+                          <TableRow key={index}>
+                            <TableCell className="font-medium">
+                              {result.segments?.month}
+                            </TableCell>
+                            <TableCell className="text-right text-muted-foreground">
+                              {formatNumber(rowImpressions)}
+                            </TableCell>
+                            <TableCell className="text-right text-muted-foreground">
+                              {formatNumber(rowClicks)}
+                            </TableCell>
+                            <TableCell className="text-right text-emerald-600 font-medium">
+                              {conversions > 0 ? conversions.toFixed(2) : "0"}
+                            </TableCell>
+                            <TableCell className="text-right font-medium text-purple-600">
+                              {formatCurrency(rowCostMicros)}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                                    <Info className="h-4 w-4 text-muted-foreground" />
+                                    <span className="sr-only">Ver detalhes</span>
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent className="sm:max-w-md">
+                                  <DialogHeader>
+                                    <DialogTitle>Métricas Detalhadas</DialogTitle>
+                                    <DialogDescription>
+                                      Desempenho da campanha em {result.segments?.month}
+                                    </DialogDescription>
+                                  </DialogHeader>
+                                  <div className="grid gap-4 py-4">
+                                    <div className="grid grid-cols-2 items-center gap-4">
+                                      <span className="text-sm font-medium text-muted-foreground">Impressões</span>
+                                      <span className="text-sm font-medium text-right">{formatNumber(rowImpressions)}</span>
+                                    </div>
+                                    <div className="grid grid-cols-2 items-center gap-4">
+                                      <span className="text-sm font-medium text-muted-foreground">Cliques</span>
+                                      <span className="text-sm font-medium text-right">{formatNumber(rowClicks)}</span>
+                                    </div>
+                                    <div className="grid grid-cols-2 items-center gap-4">
+                                      <span className="text-sm font-medium text-muted-foreground">CTR</span>
+                                      <span className="text-sm font-medium text-right">{formatPercent(rowCtr)}</span>
+                                    </div>
+                                    <div className="grid grid-cols-2 items-center gap-4">
+                                      <span className="text-sm font-medium text-muted-foreground">Conversões</span>
+                                      <span className="text-sm font-medium text-emerald-600 text-right">{conversions > 0 ? conversions.toFixed(2) : "0"}</span>
+                                    </div>
+                                    <div className="grid grid-cols-2 items-center gap-4">
+                                      <span className="text-sm font-medium text-muted-foreground">Custo / Conversão</span>
+                                      <span className="text-sm font-medium text-right">{costPerConversionValid ? formatCurrency(result.metrics?.costPerConversion) : "-"}</span>
+                                    </div>
+                                    <div className="grid grid-cols-2 items-center gap-4">
+                                      <span className="text-sm font-medium text-muted-foreground">CPC Médio</span>
+                                      <span className="text-sm font-medium text-right">{result.metrics?.averageCpc ? formatCurrency(result.metrics.averageCpc) : "-"}</span>
+                                    </div>
+                                    <div className="grid grid-cols-2 items-center gap-4">
+                                      <span className="text-sm font-medium text-muted-foreground">CPM Médio</span>
+                                      <span className="text-sm font-medium text-right">{rowCpm ? formatCurrency(rowCpm) : "-"}</span>
+                                    </div>
+                                    <div className="grid grid-cols-2 items-center gap-4 pt-4 border-t">
+                                      <span className="text-sm font-medium text-muted-foreground">Custo Total</span>
+                                      <span className="text-sm font-medium text-purple-600 text-right">{formatCurrency(rowCostMicros)}</span>
+                                    </div>
+                                  </div>
+                                </DialogContent>
+                              </Dialog>
+                            </TableCell>
+                          </TableRow>
+                      );
+                    })
                 )}
               </TableBody>
             </Table>
