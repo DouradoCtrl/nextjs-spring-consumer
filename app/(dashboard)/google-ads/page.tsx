@@ -18,6 +18,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { CircleCheck, CirclePause, Search, LayoutList, CheckCircle2, PauseCircle, MousePointerClick, Eye, DollarSign, Activity } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { QuickFilters } from "@/components/quick-filters";
 import { AdvancedFilters } from "@/components/advanced-filters";
 import { InvestmentProgress } from "@/components/investment-progress";
@@ -143,6 +144,7 @@ export default function Page() {
         .then((res) => res.json())
         .then((data: GoogleAdsCustomerResponse) => {
           if (data.results && data.results.length > 0) {
+            console.log(data.results);
             setGeneralMetrics(data.results[0].metrics);
           } else {
             setGeneralMetrics(null);
@@ -255,125 +257,137 @@ export default function Page() {
           step={BUDGET_SETTINGS.STEP}
         />
 
-        <div className="grid auto-rows-min gap-4 md:grid-cols-3">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-2">
-                <LayoutList className="h-4 w-4 text-muted-foreground" />
-                Total de Campanhas
-              </CardDescription>
-              <CardTitle className="text-3xl">{loading ? <Skeleton className="h-8 w-16" /> : campaigns.length}</CardTitle>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-500" />
-                Campanhas Ativas
-              </CardDescription>
-              <CardTitle className="text-3xl text-green-600 dark:text-green-500">
-                {loading ? <Skeleton className="h-8 w-16" /> : activeCampaigns}
-              </CardTitle>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-2">
-                <PauseCircle className="h-4 w-4 text-yellow-600 dark:text-yellow-500" />
-                Campanhas Pausadas
-              </CardDescription>
-              <CardTitle className="text-3xl text-yellow-600 dark:text-yellow-500">
-                {loading ? <Skeleton className="h-8 w-16" /> : pausedCampaigns}
-              </CardTitle>
-            </CardHeader>
-          </Card>
-        </div>
-        
-        <div className="rounded-xl border bg-card text-card-foreground shadow-sm overflow-hidden mt-2">
-            <Table>
-              <TableHeader>
-                <TableRow className="hover:bg-transparent">
-                  <TableHead className="text-center w-16">#</TableHead>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>ID</TableHead>
-                  <TableHead className="text-center">Status</TableHead>
-                  <TableHead className="text-right">Cliques</TableHead>
-                  <TableHead className="text-right">Impressões</TableHead>
-                  <TableHead className="text-right">CPC Médio</TableHead>
-                  <TableHead className="text-right">Custo</TableHead>
-                  <TableHead className="text-center">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                    <TableRow>
+
+        <Tabs defaultValue="campaing" className="w-full">
+          <TabsList>
+            <TabsTrigger value="campaing">Campanhas</TabsTrigger>
+            <TabsTrigger value="graphics">Gráficos</TabsTrigger>
+          </TabsList>
+          <TabsContent value="campaing">
+            <div className="grid auto-rows-min gap-4 md:grid-cols-3 my-6">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardDescription className="flex items-center gap-2">
+                    <LayoutList className="h-4 w-4 text-muted-foreground" />
+                    Total de Campanhas
+                  </CardDescription>
+                  <CardTitle className="text-3xl">{loading ? <Skeleton className="h-8 w-16" /> : campaigns.length}</CardTitle>
+                </CardHeader>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardDescription className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-500" />
+                    Campanhas Ativas
+                  </CardDescription>
+                  <CardTitle className="text-3xl text-green-600 dark:text-green-500">
+                    {loading ? <Skeleton className="h-8 w-16" /> : activeCampaigns}
+                  </CardTitle>
+                </CardHeader>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardDescription className="flex items-center gap-2">
+                    <PauseCircle className="h-4 w-4 text-yellow-600 dark:text-yellow-500" />
+                    Campanhas Pausadas
+                  </CardDescription>
+                  <CardTitle className="text-3xl text-yellow-600 dark:text-yellow-500">
+                    {loading ? <Skeleton className="h-8 w-16" /> : pausedCampaigns}
+                  </CardTitle>
+                </CardHeader>
+              </Card>
+            </div>
+
+            <div className="rounded-xl border bg-card text-card-foreground shadow-sm overflow-hidden mt-2">
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="text-center w-16">#</TableHead>
+                    <TableHead>Nome</TableHead>
+                    <TableHead>ID</TableHead>
+                    <TableHead className="text-center">Status</TableHead>
+                    <TableHead className="text-right">Cliques</TableHead>
+                    <TableHead className="text-right">Impressões</TableHead>
+                    <TableHead className="text-right">CPC Médio</TableHead>
+                    <TableHead className="text-right">Custo</TableHead>
+                    <TableHead className="text-center">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                      <TableRow>
                         <TableCell colSpan={9} className="h-24 text-center">
-                            <div className="flex justify-center items-center h-full space-x-2">
-                                <Skeleton className="h-8 w-full max-w-125" />
-                            </div>
+                          <div className="flex justify-center items-center h-full space-x-2">
+                            <Skeleton className="h-8 w-full max-w-125" />
+                          </div>
                         </TableCell>
-                    </TableRow>
-                ) : campaigns.length === 0 ? (
-                    <TableRow>
+                      </TableRow>
+                  ) : campaigns.length === 0 ? (
+                      <TableRow>
                         <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
-                            Nenhuma campanha encontrada.
+                          Nenhuma campanha encontrada.
                         </TableCell>
-                    </TableRow>
-                ) : (
-                    campaigns.map((result, index) => (
-                    <TableRow key={result.campaign.id}>
-                        <TableCell className="text-center text-muted-foreground">{index + 1}</TableCell>
-                        <TableCell className="font-medium">{result.campaign.name}</TableCell>
-                        <TableCell>
-                            <Badge variant="outline" className="font-mono">
+                      </TableRow>
+                  ) : (
+                      campaigns.map((result, index) => (
+                          <TableRow key={result.campaign.id}>
+                            <TableCell className="text-center text-muted-foreground">{index + 1}</TableCell>
+                            <TableCell className="font-medium">{result.campaign.name}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="font-mono">
                                 {result.campaign.id}
-                            </Badge>
-                        </TableCell>
-                        <TableCell className="text-center">
-                            <div className="flex justify-center">
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <div className="flex justify-center">
                                 {result.campaign.status === "ENABLED" ? (
                                     <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-500">
-                                        <CircleCheck className="h-4 w-4" />
-                                        <span className="text-xs font-medium">Ativa</span>
+                                      <CircleCheck className="h-4 w-4" />
+                                      <span className="text-xs font-medium">Ativa</span>
                                     </div>
                                 ) : result.campaign.status === "PAUSED" ? (
                                     <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-500">
-                                        <CirclePause className="h-4 w-4" />
-                                        <span className="text-xs font-medium">Pausada</span>
+                                      <CirclePause className="h-4 w-4" />
+                                      <span className="text-xs font-medium">Pausada</span>
                                     </div>
                                 ) : (
                                     <span className="text-xs font-medium text-muted-foreground">{result.campaign.status}</span>
                                 )}
-                            </div>
-                        </TableCell>
-                        <TableCell className="text-right font-medium">
-                            {formatNumber(result.metrics?.clicks)}
-                        </TableCell>
-                        <TableCell className="text-right font-medium">
-                            {formatNumber(result.metrics?.impressions)}
-                        </TableCell>
-                        <TableCell className="text-right font-medium text-muted-foreground">
-                            {formatCurrency(result.metrics?.averageCpc)}
-                        </TableCell>
-                        <TableCell className="text-right font-medium text-muted-foreground">
-                            {formatCurrency(result.metrics?.costMicros)}
-                        </TableCell>
-                        <TableCell>
-                        <div className="flex justify-center">
-                            <Button size="sm" variant="outline" className="h-8 gap-1.5" asChild>
-                              <Link href={`/google-ads/${result.campaign.id}`}>
-                                <Search className="h-3.5 w-3.5" />
-                                <span>Detalhes</span>
-                              </Link>
-                            </Button>
-                        </div>
-                        </TableCell>
-                    </TableRow>
-                    ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right font-medium">
+                              {formatNumber(result.metrics?.clicks)}
+                            </TableCell>
+                            <TableCell className="text-right font-medium">
+                              {formatNumber(result.metrics?.impressions)}
+                            </TableCell>
+                            <TableCell className="text-right font-medium text-muted-foreground">
+                              {formatCurrency(result.metrics?.averageCpc)}
+                            </TableCell>
+                            <TableCell className="text-right font-medium text-muted-foreground">
+                              {formatCurrency(result.metrics?.costMicros)}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex justify-center">
+                                <Button size="sm" variant="outline" className="h-8 gap-1.5" asChild>
+                                  <Link href={`/google-ads/${result.campaign.id}`}>
+                                    <Search className="h-3.5 w-3.5" />
+                                    <span>Detalhes</span>
+                                  </Link>
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                      ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </TabsContent>
+          <TabsContent value="graphics">
+
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
