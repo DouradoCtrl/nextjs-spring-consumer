@@ -8,10 +8,10 @@ export default function DashboardLayout({
 }) {
   return (
     <SidebarProvider>
-      <AppSidebar />
-      <SidebarInset>
-        {children}
-      </SidebarInset>
+        <AppSidebar />
+        <SidebarInset>
+            {children}
+        </SidebarInset>
     </SidebarProvider>
   );
 }
