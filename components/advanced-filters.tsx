@@ -308,7 +308,7 @@ export function AdvancedFilters({ initialStartDate, initialEndDate, onApply }: A
 
         <DialogFooter className="gap-2 sm:gap-0">
           <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancelar</Button>
-          <Button onClick={handleApplyFilter}>Aplicar Filtro</Button>
+          <Button className="ml-2" onClick={handleApplyFilter}>Aplicar Filtro</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
