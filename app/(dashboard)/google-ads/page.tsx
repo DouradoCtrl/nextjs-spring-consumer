@@ -8,7 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
-import { format } from "date-fns";
+import { format, differenceInDays } from "date-fns";
+import { Progress } from "@/components/ui/progress";
+import { Slider } from "@/components/ui/slider";
 import {
   Table,
   TableBody,
@@ -74,6 +76,7 @@ export default function Page() {
 
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
+  const [monthlyBudget, setMonthlyBudget] = useState([1000]); // Ajuste dinâmico 1000~1600
 
   useEffect(() => {
     const accessToken = (session as any)?.accessToken;
@@ -158,6 +161,15 @@ export default function Page() {
     setEndDate(end);
   };
 
+  // Lógica da Barra de Progresso APENAS para quando há datas definidas
+  const hasDateFilter = !!(startDate && endDate);
+  // Usando differenceInDays + Math.round para evitar que o truncamento "coma" 1 mês
+  const diffDays = hasDateFilter ? differenceInDays(endDate, startDate) : 0;
+  const periodMonths = Math.max(1, Math.round(diffDays / 30)); // Mínimo de 1 mês garantido
+  const totalBudget = monthlyBudget[0] * periodMonths;
+  const currentSpend = generalMetrics?.costMicros ? Number(generalMetrics.costMicros) / 1000000 : 0;
+  const progressPercentage = totalBudget > 0 ? Math.min((currentSpend / totalBudget) * 100, 100) : 0;
+
   return (
     <div className="flex flex-1 flex-col">
       <Header>
@@ -222,6 +234,68 @@ export default function Page() {
             </CardHeader>
           </Card>
         </div>
+
+        {/* Progresso de Investimento - Exibido apenas se houver filtro de data */}
+        {hasDateFilter && (
+          <Card className="shadow-sm overflow-hidden p-6">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-4 gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
+                    <DollarSign className="h-4 w-4 text-blue-600 dark:text-blue-500" />
+                    Valor Consumido
+                  </div>
+                  <div className="text-3xl font-bold tracking-tight text-foreground">
+                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(currentSpend)}
+                  </div>
+                  <div className="text-xs font-medium text-muted-foreground/80 pt-1">
+                    Período de {periodMonths} {periodMonths === 1 ? 'mês selecionado' : 'meses selecionados'}
+                  </div>
+                </div>
+                <div className="flex flex-col items-start md:items-end gap-3">
+                  <div className="flex items-center gap-3 bg-muted/50 px-3 py-1.5 rounded-lg border shadow-sm">
+                    <span className="text-xs font-semibold text-muted-foreground whitespace-nowrap">
+                      Teto Mensal:
+                    </span>
+                    <span className="text-xs font-bold text-blue-600 dark:text-blue-500 w-[60px]">
+                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(monthlyBudget[0])}
+                    </span>
+                    <Slider 
+                      value={monthlyBudget} 
+                      onValueChange={setMonthlyBudget} 
+                      max={1600} 
+                      min={1000} 
+                      step={50} 
+                      className="w-24 sm:w-32"
+                    />
+                  </div>
+                  <div className="text-left md:text-right space-y-1">
+                    <span className="text-sm font-medium text-muted-foreground">Orçamento Total</span>
+                    <div className="text-xl font-semibold text-muted-foreground">
+                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalBudget)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {loadingMetrics ? (
+                <Skeleton className="h-2 w-full rounded-full" />
+              ) : (
+                <div className="space-y-2">
+                  <Progress 
+                    value={progressPercentage} 
+                    className="h-2 rounded-full bg-blue-100/50 dark:bg-blue-950/50 [&>div]:bg-gradient-to-r [&>div]:from-blue-600 [&>div]:to-blue-400 dark:[&>div]:from-blue-600 dark:[&>div]:to-blue-400" 
+                  />
+                  <div className="flex justify-between items-center text-xs font-semibold">
+                    <span className="text-muted-foreground">0%</span>
+                    <span className="text-blue-600 dark:text-blue-500 text-sm">
+                      {progressPercentage.toFixed(1)}% Consumido
+                    </span>
+                    <span className="text-muted-foreground">100%</span>
+                  </div>
+                </div>
+              )}
+          </Card>
+        )}
 
         <div className="grid auto-rows-min gap-4 md:grid-cols-3">
           <Card>
