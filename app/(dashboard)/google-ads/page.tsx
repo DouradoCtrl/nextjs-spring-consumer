@@ -9,8 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { format, differenceInDays } from "date-fns";
-import { Progress } from "@/components/ui/progress";
-import { Slider } from "@/components/ui/slider";
 import {
   Table,
   TableBody,
@@ -22,6 +20,7 @@ import {
 import { CircleCheck, CirclePause, Search, LayoutList, CheckCircle2, PauseCircle, MousePointerClick, Eye, DollarSign, Activity } from "lucide-react";
 import { QuickFilters } from "@/components/quick-filters";
 import { AdvancedFilters } from "@/components/advanced-filters";
+import { InvestmentProgress } from "@/components/investment-progress";
 
 interface Campaign {
   resourceName: string;
@@ -67,6 +66,12 @@ const formatNumber = (num?: string | number) => {
   return new Intl.NumberFormat('pt-BR').format(Number(num));
 };
 
+const BUDGET_SETTINGS = {
+  MIN: 1000,
+  MAX: 1600,
+  STEP: 50,
+} as const;
+
 export default function Page() {
   const { data: session } = useSession();
   const [campaigns, setCampaigns] = useState<CampaignResult[]>([]);
@@ -74,9 +79,16 @@ export default function Page() {
   const [generalMetrics, setGeneralMetrics] = useState<Metrics | null>(null);
   const [loadingMetrics, setLoadingMetrics] = useState(true);
 
-  const [startDate, setStartDate] = useState<Date | null>(null);
-  const [endDate, setEndDate] = useState<Date | null>(null);
-  const [monthlyBudget, setMonthlyBudget] = useState([1000]); // Ajuste dinâmico 1000~1600
+  const getDefaultStartDate = () => {
+    const envDate = process.env.NEXT_PUBLIC_CREATED_ACCOUNT_DATE || "2025-01-01";
+    return new Date(`${envDate}T00:00:00`);
+  };
+
+  const getDefaultEndDate = () => new Date();
+
+  const [startDate, setStartDate] = useState<Date | null>(getDefaultStartDate());
+  const [endDate, setEndDate] = useState<Date | null>(getDefaultEndDate());
+  const [monthlyBudget, setMonthlyBudget] = useState([1000]);
 
   useEffect(() => {
     const accessToken = (session as any)?.accessToken;
@@ -152,23 +164,19 @@ export default function Page() {
   ).length;
 
   const handleDateChange = (start: Date | null, end: Date | null) => {
-    setStartDate(start);
-    setEndDate(end);
+    setStartDate(start || getDefaultStartDate());
+    setEndDate(end || getDefaultEndDate());
   };
 
   const handleAdvancedFilterApply = (start: Date, end: Date) => {
-    setStartDate(start);
-    setEndDate(end);
+    setStartDate(start || getDefaultStartDate());
+    setEndDate(end || getDefaultEndDate());
   };
 
-  // Lógica da Barra de Progresso APENAS para quando há datas definidas
-  const hasDateFilter = !!(startDate && endDate);
-  // Usando differenceInDays + Math.round para evitar que o truncamento "coma" 1 mês
-  const diffDays = hasDateFilter ? differenceInDays(endDate, startDate) : 0;
+  const diffDays = differenceInDays(endDate!, startDate!);
   const periodMonths = Math.max(1, Math.round(diffDays / 30)); // Mínimo de 1 mês garantido
   const totalBudget = monthlyBudget[0] * periodMonths;
   const currentSpend = generalMetrics?.costMicros ? Number(generalMetrics.costMicros) / 1000000 : 0;
-  const progressPercentage = totalBudget > 0 ? Math.min((currentSpend / totalBudget) * 100, 100) : 0;
 
   return (
     <div className="flex flex-1 flex-col">
@@ -235,67 +243,17 @@ export default function Page() {
           </Card>
         </div>
 
-        {/* Progresso de Investimento - Exibido apenas se houver filtro de data */}
-        {hasDateFilter && (
-          <Card className="shadow-sm overflow-hidden p-6">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-4 gap-4">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
-                    <DollarSign className="h-4 w-4 text-blue-600 dark:text-blue-500" />
-                    Valor Consumido
-                  </div>
-                  <div className="text-3xl font-bold tracking-tight text-foreground">
-                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(currentSpend)}
-                  </div>
-                  <div className="text-xs font-medium text-muted-foreground/80 pt-1">
-                    Período de {periodMonths} {periodMonths === 1 ? 'mês selecionado' : 'meses selecionados'}
-                  </div>
-                </div>
-                <div className="flex flex-col items-start md:items-end gap-3">
-                  <div className="flex items-center gap-3 bg-muted/50 px-3 py-1.5 rounded-lg border shadow-sm">
-                    <span className="text-xs font-semibold text-muted-foreground whitespace-nowrap">
-                      Teto Mensal:
-                    </span>
-                    <span className="text-xs font-bold text-blue-600 dark:text-blue-500 w-[60px]">
-                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(monthlyBudget[0])}
-                    </span>
-                    <Slider 
-                      value={monthlyBudget} 
-                      onValueChange={setMonthlyBudget} 
-                      max={1600} 
-                      min={1000} 
-                      step={50} 
-                      className="w-24 sm:w-32"
-                    />
-                  </div>
-                  <div className="text-left md:text-right space-y-1">
-                    <span className="text-sm font-medium text-muted-foreground">Orçamento Total</span>
-                    <div className="text-xl font-semibold text-muted-foreground">
-                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalBudget)}
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              {loadingMetrics ? (
-                <Skeleton className="h-2 w-full rounded-full" />
-              ) : (
-                <div className="space-y-2">
-                  <Progress 
-                    value={progressPercentage} 
-                    className="h-2 rounded-full bg-blue-100/50 dark:bg-blue-950/50 [&>div]:bg-gradient-to-r [&>div]:from-blue-600 [&>div]:to-blue-400 dark:[&>div]:from-blue-600 dark:[&>div]:to-blue-400" 
-                  />
-                  <div className="flex justify-between items-center text-xs font-semibold">
-                    <span className="text-muted-foreground">0%</span>
-                    <span className="text-blue-600 dark:text-blue-500 text-sm">
-                      {progressPercentage.toFixed(1)}% Consumido
-                    </span>
-                    <span className="text-muted-foreground">100%</span>
-                  </div>
-                </div>
-              )}
-          </Card>
-        )}
+        <InvestmentProgress
+          currentSpend={currentSpend}
+          periodMonths={periodMonths}
+          monthlyBudget={monthlyBudget}
+          onMonthlyBudgetChange={setMonthlyBudget}
+          totalBudget={totalBudget}
+          loading={loadingMetrics}
+          minBudget={BUDGET_SETTINGS.MIN}
+          maxBudget={BUDGET_SETTINGS.MAX}
+          step={BUDGET_SETTINGS.STEP}
+        />
 
         <div className="grid auto-rows-min gap-4 md:grid-cols-3">
           <Card>
