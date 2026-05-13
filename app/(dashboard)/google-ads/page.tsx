@@ -22,6 +22,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { QuickFilters } from "@/components/quick-filters";
 import { AdvancedFilters } from "@/components/advanced-filters";
 import { InvestmentProgress } from "@/components/investment-progress";
+import {CampaignMonthlyChart} from "@/components/campaign-monthly-chart";
 
 interface Campaign {
   resourceName: string;
@@ -385,7 +386,11 @@ export default function Page() {
             </div>
           </TabsContent>
           <TabsContent value="graphics">
-
+            <CampaignMonthlyChart className="mt-6"
+                accessToken={(session as any)?.accessToken}
+                startDate={startDate}
+                endDate={endDate}
+            />
           </TabsContent>
         </Tabs>
       </div>
