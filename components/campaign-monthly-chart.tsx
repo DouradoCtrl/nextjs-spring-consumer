@@ -94,8 +94,8 @@ export function CampaignMonthlyChart({ accessToken, startDate, endDate, classNam
                             // Adicionado "|| 0" para garantir que valores nulos sejam numéricos
                             clicks: Number(item.metrics.clicks || 0),
                             impressions: Number(item.metrics.impressions || 0),
-                            cost: Number(item.metrics.costMicros || 0) / 1000000,
-                            cpc: Number(item.metrics.averageCpc || 0) / 1000000,
+                            cost: Number((Number(item.metrics.costMicros || 0) / 1000000).toFixed(2)),
+                            cpc: Number((Number(item.metrics.averageCpc || 0) / 1000000).toFixed(2)),
                             fullDate: item.segments.month
                         }
                     })
