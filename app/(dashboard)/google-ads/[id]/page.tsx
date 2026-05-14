@@ -473,10 +473,11 @@ export default function CampaignDetailsPage({ params }: PageProps) {
                   <TableCell className="text-right font-bold">
                     {totalConversions > 0 ? totalConversions.toFixed(2) : "0"}
                   </TableCell>
-                  <TableCell className="text-right font-bold">
-                    {formatCurrency(totalCostMicros)}
+                  <TableCell colSpan={2}  className="text-center font-bold">
+                    <div className="ml-4">
+                      {formatCurrency(totalCostMicros)}
+                    </div>
                   </TableCell>
-                  <TableCell className="text-center">-</TableCell>
                 </TableRow>
               </TableFooter>
             </Table>
