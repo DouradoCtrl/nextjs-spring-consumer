@@ -6,10 +6,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Info } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -31,6 +28,8 @@ interface MetricsDetailsModalProps {
   formatCurrency: (micros?: number | string) => string;
   formatNumber: (num?: number | string) => string;
   formatPercent: (val?: number | string) => string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 export function MetricsDetailsModal({
@@ -47,6 +46,8 @@ export function MetricsDetailsModal({
   formatCurrency,
   formatNumber,
   formatPercent,
+  open,
+  onOpenChange,
 }: MetricsDetailsModalProps) {
   const metrics = [
     { label: "Impressões", value: formatNumber(impressions) },
@@ -60,13 +61,7 @@ export function MetricsDetailsModal({
   ];
 
   return (
-    <Dialog>
-      <DialogTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-8 w-8">
-          <Info className="h-4 w-4 text-muted-foreground" />
-          <span className="sr-only">Ver detalhes</span>
-        </Button>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Métricas Detalhadas</DialogTitle>
