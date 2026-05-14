@@ -23,12 +23,11 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 
-// 1. Cores Hexadecimais diretas aplicadas (Resolve os pontos pretos e linhas invisíveis)
 const chartConfig = {
-    clicks: { label: "Cliques", color: "#3b82f6", icon: MousePointerClick }, // Azul
-    impressions: { label: "Impressões", color: "#8b5cf6", icon: Eye },       // Roxo
-    cost: { label: "Custo (R$)", color: "#10b981", icon: DollarSign },       // Verde
-    cpc: { label: "CPC Médio", color: "#f59e0b", icon: Activity },           // Laranja
+    clicks: { label: "Cliques", color: "#3b82f6", icon: MousePointerClick },
+    impressions: { label: "Impressões", color: "#8b5cf6", icon: Eye },
+    cost: { label: "Custo (R$)", color: "#10b981", icon: DollarSign },
+    cpc: { label: "CPC Médio", color: "#f59e0b", icon: Activity },
 } satisfies ChartConfig
 
 interface ChartDataPoint {
@@ -44,14 +43,13 @@ interface CampaignMonthlyChartProps {
     accessToken: string;
     startDate: Date | null;
     endDate: Date | null;
-    className: string | undefined;
+    className?: string;
 }
 
 export function CampaignMonthlyChart({ accessToken, startDate, endDate, className }: CampaignMonthlyChartProps) {
     const [data, setData] = useState<ChartDataPoint[]>([])
     const [loading, setLoading] = useState(true)
 
-    // Estado para controlar a visibilidade de cada linha
     const [activeLines, setActiveLines] = useState({
         clicks: true,
         impressions: true,
@@ -59,7 +57,6 @@ export function CampaignMonthlyChart({ accessToken, startDate, endDate, classNam
         cpc: true,
     })
 
-    // Função para ligar/desligar a linha
     const toggleLine = (key: keyof typeof activeLines) => {
         setActiveLines((prev) => ({ ...prev, [key]: !prev[key] }))
     }
@@ -91,7 +88,6 @@ export function CampaignMonthlyChart({ accessToken, startDate, endDate, classNam
                         const date = parseISO(item.segments.month)
                         return {
                             month: format(date, "MMM/yy", { locale: ptBR }),
-                            // Adicionado "|| 0" para garantir que valores nulos sejam numéricos
                             clicks: Number(item.metrics.clicks || 0),
                             impressions: Number(item.metrics.impressions || 0),
                             cost: Number((Number(item.metrics.costMicros || 0) / 1000000).toFixed(2)),
@@ -132,7 +128,6 @@ export function CampaignMonthlyChart({ accessToken, startDate, endDate, classNam
                     {startDate ? format(startDate, "dd/MM/yyyy") : "..."} a {endDate ? format(endDate, "dd/MM/yyyy") : "..."}
                 </CardDescription>
 
-                {/* 2. Botões Nativos Estilizados (Garante que os botões vão aparecer) */}
                 <div className="flex flex-wrap gap-2 pt-4">
                     {(Object.keys(chartConfig) as Array<keyof typeof chartConfig>).map((key) => {
                         const config = chartConfig[key]
@@ -175,60 +170,59 @@ export function CampaignMonthlyChart({ accessToken, startDate, endDate, classNam
                             tickLine={false}
                             axisLine={false}
                             tickMargin={8}
+                            // Correção para o primeiro mês não ficar oculto/cortado
+                            padding={{ left: 32, right: 32 }}
                         />
 
-                        {/* Eixos Y Ocultos para separar volumes altos (Impressões) de valores baixos (CPC) */}
-                        <YAxis yAxisId="left" orientation="left" hide />
-                        <YAxis yAxisId="right" orientation="right" hide />
+                        {/* Eixos independentes para escala perfeita das curvas */}
+                        <YAxis yAxisId="clicks" hide domain={['auto', 'auto']} />
+                        <YAxis yAxisId="impressions" hide domain={['auto', 'auto']} />
+                        <YAxis yAxisId="cost" hide domain={['auto', 'auto']} />
+                        <YAxis yAxisId="cpc" hide domain={['auto', 'auto']} />
 
                         <ChartTooltip
-                            cursor={false}
+                            cursor={{ stroke: '#ddd', strokeWidth: 1 }}
                             content={<ChartTooltipContent hideLabel className="w-[180px]" />}
                         />
 
-                        {/* 3. connectNulls garante que a linha não quebre e type="monotone" ajuda no desenho contínuo */}
                         <Line
-                            yAxisId="left"
+                            yAxisId="clicks"
                             hide={!activeLines.clicks}
                             dataKey="clicks"
-                            type="monotone"
+                            type="linear"
                             stroke="var(--color-clicks)"
                             strokeWidth={2}
-                            dot={{ fill: "var(--color-clicks)" }}
-                            activeDot={{ r: 6 }}
+                            dot={false}
                             connectNulls
                         />
                         <Line
-                            yAxisId="left"
+                            yAxisId="impressions"
                             hide={!activeLines.impressions}
                             dataKey="impressions"
-                            type="monotone"
+                            type="linear"
                             stroke="var(--color-impressions)"
                             strokeWidth={2}
-                            dot={{ fill: "var(--color-impressions)" }}
-                            activeDot={{ r: 6 }}
+                            dot={false}
                             connectNulls
                         />
                         <Line
-                            yAxisId="right"
+                            yAxisId="cost"
                             hide={!activeLines.cost}
                             dataKey="cost"
-                            type="monotone"
+                            type="linear"
                             stroke="var(--color-cost)"
                             strokeWidth={2}
-                            dot={{ fill: "var(--color-cost)" }}
-                            activeDot={{ r: 6 }}
+                            dot={false}
                             connectNulls
                         />
                         <Line
-                            yAxisId="right"
+                            yAxisId="cpc"
                             hide={!activeLines.cpc}
                             dataKey="cpc"
-                            type="monotone"
+                            type="linear"
                             stroke="var(--color-cpc)"
                             strokeWidth={2}
-                            dot={{ fill: "var(--color-cpc)" }}
-                            activeDot={{ r: 6 }}
+                            dot={false}
                             connectNulls
                         />
                     </LineChart>
