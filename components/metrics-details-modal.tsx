@@ -1,0 +1,92 @@
+"use client";
+
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Info } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableRow,
+} from "@/components/ui/table";
+
+interface MetricsDetailsModalProps {
+  month: string;
+  impressions: number;
+  clicks: number;
+  ctr: number;
+  conversions: number;
+  costPerConversion?: number;
+  costPerConversionValid: boolean;
+  averageCpc?: number;
+  cpm: number;
+  costMicros: number;
+  formatCurrency: (micros?: number | string) => string;
+  formatNumber: (num?: number | string) => string;
+  formatPercent: (val?: number | string) => string;
+}
+
+export function MetricsDetailsModal({
+  month,
+  impressions,
+  clicks,
+  ctr,
+  conversions,
+  costPerConversion,
+  costPerConversionValid,
+  averageCpc,
+  cpm,
+  costMicros,
+  formatCurrency,
+  formatNumber,
+  formatPercent,
+}: MetricsDetailsModalProps) {
+  const metrics = [
+    { label: "Impressões", value: formatNumber(impressions) },
+    { label: "Cliques", value: formatNumber(clicks) },
+    { label: "CTR", value: formatPercent(ctr) },
+    { label: "Conversões", value: conversions > 0 ? conversions.toFixed(2) : "0", color: "text-emerald-600" },
+    { label: "Custo / Conversão", value: costPerConversionValid ? formatCurrency(costPerConversion) : "-" },
+    { label: "CPC Médio", value: averageCpc ? formatCurrency(averageCpc) : "-" },
+    { label: "CPM Médio", value: cpm ? formatCurrency(cpm) : "-" },
+    { label: "Custo Total", value: formatCurrency(costMicros), color: "text-purple-600", separator: true },
+  ];
+
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="icon" className="h-8 w-8">
+          <Info className="h-4 w-4 text-muted-foreground" />
+          <span className="sr-only">Ver detalhes</span>
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Métricas Detalhadas</DialogTitle>
+          <DialogDescription>Desempenho da campanha em {month}</DialogDescription>
+        </DialogHeader>
+        <Table>
+          <TableBody>
+            {metrics.map((metric, idx) => (
+              <TableRow key={idx} className={metric.separator ? "border-t-2" : ""}>
+                <TableCell className="text-muted-foreground text-sm">{metric.label}</TableCell>
+                <TableCell className={`text-right text-sm font-medium ${metric.color || ""}`}>
+                  {metric.value}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+
