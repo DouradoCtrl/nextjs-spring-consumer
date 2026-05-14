@@ -28,6 +28,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { QuickFilters } from "@/components/quick-filters";
 import { AdvancedFilters } from "@/components/advanced-filters";
+import { ManualMetricsModal } from "@/components/manual-metrics-modal";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -85,6 +86,9 @@ export default function CampaignDetailsPage({ params }: PageProps) {
     averageCpc?: number;
     cpm: number;
     costMicros: number;
+  } | null>(null);
+  const [selectedManualMetricsRow, setSelectedManualMetricsRow] = useState<{
+    month: string;
   } | null>(null);
 
   const fetchCampaignInfo = async () => {
@@ -452,7 +456,15 @@ export default function CampaignDetailsPage({ params }: PageProps) {
                                   >
                                     Detalhes
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem>Métricas Manuais</DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() =>
+                                      setSelectedManualMetricsRow({
+                                        month: result.segments?.month || "",
+                                      })
+                                    }
+                                  >
+                                    Métricas Manuais
+                                  </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
                             </TableCell>
@@ -501,6 +513,17 @@ export default function CampaignDetailsPage({ params }: PageProps) {
               formatPercent={formatPercent}
               open={!!selectedRowMetrics}
               onOpenChange={(open: boolean) => !open && setSelectedRowMetrics(null)}
+            />
+          )}
+
+          {/* Modal de Métricas Manuais */}
+          {selectedManualMetricsRow && campaignInfo && (
+            <ManualMetricsModal
+              id={id}
+              month={selectedManualMetricsRow.month}
+              campaignName={campaignInfo.name}
+              open={!!selectedManualMetricsRow}
+              onOpenChange={(open: boolean) => !open && setSelectedManualMetricsRow(null)}
             />
           )}
         </div>
