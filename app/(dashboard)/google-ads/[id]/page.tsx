@@ -13,16 +13,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { MousePointerClick, Target, DollarSign, Eye, Percent, Activity, TrendingUp, Info } from "lucide-react";
+import { MousePointerClick, Target, DollarSign, Eye, Percent, Activity, TrendingUp } from "lucide-react";
+import { MetricsDetailsModal } from "@/components/metrics-details-modal";
 
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -414,56 +406,21 @@ export default function CampaignDetailsPage({ params }: PageProps) {
                               {formatCurrency(rowCostMicros)}
                             </TableCell>
                             <TableCell className="text-center">
-                              <Dialog>
-                                <DialogTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                                    <Info className="h-4 w-4 text-muted-foreground" />
-                                    <span className="sr-only">Ver detalhes</span>
-                                  </Button>
-                                </DialogTrigger>
-                                <DialogContent className="sm:max-w-md">
-                                  <DialogHeader>
-                                    <DialogTitle>Métricas Detalhadas</DialogTitle>
-                                    <DialogDescription>
-                                      Desempenho da campanha em {result.segments?.month}
-                                    </DialogDescription>
-                                  </DialogHeader>
-                                  <div className="grid gap-4 py-4">
-                                    <div className="grid grid-cols-2 items-center gap-4">
-                                      <span className="text-sm font-medium text-muted-foreground">Impressões</span>
-                                      <span className="text-sm font-medium text-right">{formatNumber(rowImpressions)}</span>
-                                    </div>
-                                    <div className="grid grid-cols-2 items-center gap-4">
-                                      <span className="text-sm font-medium text-muted-foreground">Cliques</span>
-                                      <span className="text-sm font-medium text-right">{formatNumber(rowClicks)}</span>
-                                    </div>
-                                    <div className="grid grid-cols-2 items-center gap-4">
-                                      <span className="text-sm font-medium text-muted-foreground">CTR</span>
-                                      <span className="text-sm font-medium text-right">{formatPercent(rowCtr)}</span>
-                                    </div>
-                                    <div className="grid grid-cols-2 items-center gap-4">
-                                      <span className="text-sm font-medium text-muted-foreground">Conversões</span>
-                                      <span className="text-sm font-medium text-emerald-600 text-right">{conversions > 0 ? conversions.toFixed(2) : "0"}</span>
-                                    </div>
-                                    <div className="grid grid-cols-2 items-center gap-4">
-                                      <span className="text-sm font-medium text-muted-foreground">Custo / Conversão</span>
-                                      <span className="text-sm font-medium text-right">{costPerConversionValid ? formatCurrency(result.metrics?.costPerConversion) : "-"}</span>
-                                    </div>
-                                    <div className="grid grid-cols-2 items-center gap-4">
-                                      <span className="text-sm font-medium text-muted-foreground">CPC Médio</span>
-                                      <span className="text-sm font-medium text-right">{result.metrics?.averageCpc ? formatCurrency(result.metrics.averageCpc) : "-"}</span>
-                                    </div>
-                                    <div className="grid grid-cols-2 items-center gap-4">
-                                      <span className="text-sm font-medium text-muted-foreground">CPM Médio</span>
-                                      <span className="text-sm font-medium text-right">{rowCpm ? formatCurrency(rowCpm) : "-"}</span>
-                                    </div>
-                                    <div className="grid grid-cols-2 items-center gap-4 pt-4 border-t">
-                                      <span className="text-sm font-medium text-muted-foreground">Custo Total</span>
-                                      <span className="text-sm font-medium text-purple-600 text-right">{formatCurrency(rowCostMicros)}</span>
-                                    </div>
-                                  </div>
-                                </DialogContent>
-                              </Dialog>
+                              <MetricsDetailsModal
+                                month={result.segments?.month || ""}
+                                impressions={rowImpressions}
+                                clicks={rowClicks}
+                                ctr={rowCtr}
+                                conversions={conversions}
+                                costPerConversion={result.metrics?.costPerConversion}
+                                costPerConversionValid={costPerConversionValid}
+                                averageCpc={result.metrics?.averageCpc}
+                                cpm={rowCpm}
+                                costMicros={rowCostMicros}
+                                formatCurrency={formatCurrency}
+                                formatNumber={formatNumber}
+                                formatPercent={formatPercent}
+                              />
                             </TableCell>
                           </TableRow>
                       );
