@@ -374,11 +374,11 @@ export default function CampaignDetailsPage({ params }: PageProps) {
               <TableHeader>
                 <TableRow className="hover:bg-transparent bg-muted/50">
                   <TableHead>Mês</TableHead>
-                  <TableHead className="text-right">Impressões</TableHead>
-                  <TableHead className="text-right">Cliques</TableHead>
-                  <TableHead className="text-right">Conversões</TableHead>
-                  <TableHead className="text-right">Custo</TableHead>
-                  <TableHead className="text-center w-25">Ações</TableHead>
+                  <TableHead className="text-right font-bold">Impressões</TableHead>
+                  <TableHead className="text-right font-bold">Cliques</TableHead>
+                  <TableHead className="text-right font-bold">Conversões</TableHead>
+                  <TableHead className="text-right font-bold">Custo</TableHead>
+                  <TableHead className="text-center w-25 font-bold">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
