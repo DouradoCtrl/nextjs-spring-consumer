@@ -13,7 +13,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { MousePointerClick, Target, DollarSign, Eye, Percent, Activity, TrendingUp } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { MousePointerClick, Target, DollarSign, Eye, Percent, Activity, TrendingUp, MoreVertical } from "lucide-react";
 import { MetricsDetailsModal } from "@/components/metrics-details-modal";
 
 import { format } from "date-fns";
@@ -66,6 +73,18 @@ export default function CampaignDetailsPage({ params }: PageProps) {
   const [loadingMetrics, setLoadingMetrics] = useState<boolean>(true);
   const [results, setResults] = useState<CampaignResult[]>([]);
   const [campaignInfo, setCampaignInfo] = useState<Campaign | null>(null);
+  const [selectedRowMetrics, setSelectedRowMetrics] = useState<{
+    month: string;
+    impressions: number;
+    clicks: number;
+    ctr: number;
+    conversions: number;
+    costPerConversion?: number;
+    costPerConversionValid: boolean;
+    averageCpc?: number;
+    cpm: number;
+    costMicros: number;
+  } | null>(null);
 
   const fetchCampaignInfo = async () => {
     const accessToken = (session as { accessToken?: string })?.accessToken;
@@ -358,7 +377,7 @@ export default function CampaignDetailsPage({ params }: PageProps) {
                   <TableHead className="text-right">Cliques</TableHead>
                   <TableHead className="text-right">Conversões</TableHead>
                   <TableHead className="text-right">Custo</TableHead>
-                  <TableHead className="text-center w-[100px]">Ações</TableHead>
+                  <TableHead className="text-center w-25">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -406,21 +425,35 @@ export default function CampaignDetailsPage({ params }: PageProps) {
                               {formatCurrency(rowCostMicros)}
                             </TableCell>
                             <TableCell className="text-center">
-                              <MetricsDetailsModal
-                                month={result.segments?.month || ""}
-                                impressions={rowImpressions}
-                                clicks={rowClicks}
-                                ctr={rowCtr}
-                                conversions={conversions}
-                                costPerConversion={result.metrics?.costPerConversion}
-                                costPerConversionValid={costPerConversionValid}
-                                averageCpc={result.metrics?.averageCpc}
-                                cpm={rowCpm}
-                                costMicros={rowCostMicros}
-                                formatCurrency={formatCurrency}
-                                formatNumber={formatNumber}
-                                formatPercent={formatPercent}
-                              />
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                                    <MoreVertical className="h-4 w-4" />
+                                    <span className="sr-only">Abrir menu</span>
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-40">
+                                  <DropdownMenuItem
+                                    onClick={() =>
+                                      setSelectedRowMetrics({
+                                        month: result.segments?.month || "",
+                                        impressions: rowImpressions,
+                                        clicks: rowClicks,
+                                        ctr: rowCtr,
+                                        conversions,
+                                        costPerConversion: result.metrics?.costPerConversion,
+                                        costPerConversionValid,
+                                        averageCpc: result.metrics?.averageCpc,
+                                        cpm: rowCpm,
+                                        costMicros: rowCostMicros,
+                                      })
+                                    }
+                                  >
+                                    Detalhes
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem>Métricas Manuais</DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             </TableCell>
                           </TableRow>
                       );
@@ -429,6 +462,27 @@ export default function CampaignDetailsPage({ params }: PageProps) {
               </TableBody>
             </Table>
           </div>
+
+          {/* Modal de Detalhes */}
+          {selectedRowMetrics && (
+            <MetricsDetailsModal
+              month={selectedRowMetrics.month}
+              impressions={selectedRowMetrics.impressions}
+              clicks={selectedRowMetrics.clicks}
+              ctr={selectedRowMetrics.ctr}
+              conversions={selectedRowMetrics.conversions}
+              costPerConversion={selectedRowMetrics.costPerConversion}
+              costPerConversionValid={selectedRowMetrics.costPerConversionValid}
+              averageCpc={selectedRowMetrics.averageCpc}
+              cpm={selectedRowMetrics.cpm}
+              costMicros={selectedRowMetrics.costMicros}
+              formatCurrency={formatCurrency}
+              formatNumber={formatNumber}
+              formatPercent={formatPercent}
+              open={!!selectedRowMetrics}
+              onOpenChange={(open: boolean) => !open && setSelectedRowMetrics(null)}
+            />
+          )}
         </div>
       </div>
   );
