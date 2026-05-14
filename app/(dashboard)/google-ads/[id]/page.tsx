@@ -21,7 +21,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { MousePointerClick, Target, DollarSign, Eye, Percent, Activity, TrendingUp, MoreVertical } from "lucide-react";
+import { MousePointerClick, Target, DollarSign, Eye, Percent, Activity, TrendingUp, MoreVertical, SquarePen } from "lucide-react";
 import { MetricsDetailsModal } from "@/components/metrics-details-modal";
 
 import { format } from "date-fns";
@@ -454,6 +454,7 @@ export default function CampaignDetailsPage({ params }: PageProps) {
                                       })
                                     }
                                   >
+                                    <Eye/>
                                     Detalhes
                                   </DropdownMenuItem>
                                   <DropdownMenuItem
@@ -463,7 +464,8 @@ export default function CampaignDetailsPage({ params }: PageProps) {
                                       })
                                     }
                                   >
-                                    Métricas Manuais
+                                    <SquarePen />
+                                    Métricas
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
