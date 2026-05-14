@@ -12,6 +12,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableFooter,
 } from "@/components/ui/table";
 import {
   DropdownMenu,
@@ -460,6 +461,24 @@ export default function CampaignDetailsPage({ params }: PageProps) {
                     })
                 )}
               </TableBody>
+              <TableFooter>
+                <TableRow className="hover:bg-transparent">
+                  <TableCell className="font-bold">Total</TableCell>
+                  <TableCell className="text-right font-bold">
+                    {formatNumber(totalImpressions)}
+                  </TableCell>
+                  <TableCell className="text-right font-bold">
+                    {formatNumber(totalClicks)}
+                  </TableCell>
+                  <TableCell className="text-right font-bold">
+                    {totalConversions > 0 ? totalConversions.toFixed(2) : "0"}
+                  </TableCell>
+                  <TableCell className="text-right font-bold">
+                    {formatCurrency(totalCostMicros)}
+                  </TableCell>
+                  <TableCell className="text-center">-</TableCell>
+                </TableRow>
+              </TableFooter>
             </Table>
           </div>
 
