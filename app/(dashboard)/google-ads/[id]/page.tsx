@@ -29,6 +29,8 @@ import { cn } from "@/lib/utils";
 import { QuickFilters } from "@/components/quick-filters";
 import { AdvancedFilters } from "@/components/advanced-filters";
 import { ManualMetricsModal } from "@/components/manual-metrics-modal";
+import { fetchCampaignInfo, fetchCombinedMetrics } from "@/services/campaign-service";
+import { formatCurrency, formatNumber, formatPercent, getStatusText, getStatusColor } from "@/lib/format-utils";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -39,27 +41,13 @@ interface Campaign {
   name: string;
 }
 
-interface Metrics {
-  clicks?: string | number;
-  conversions?: string | number;
-  costMicros?: string | number;
-  costPerConversion?: number;
-  averageCpc?: number;
-  impressions?: string | number;
-}
-
-interface Segments {
-  month?: string;
-}
-
-interface CampaignResult {
-  campaign: Campaign;
-  metrics?: Metrics;
-  segments?: Segments;
-}
-
-interface GoogleAdsResponse {
-  results?: CampaignResult[];
+interface CombinedMetricsResult {
+  month: string;
+  impressions: number;
+  clicks: number;
+  costMicros: number;
+  leads: number;
+  sales: number;
 }
 
 export default function CampaignDetailsPage({ params }: PageProps) {
@@ -73,7 +61,7 @@ export default function CampaignDetailsPage({ params }: PageProps) {
   // Estados de dados
   const [loadingInfo, setLoadingInfo] = useState<boolean>(true);
   const [loadingMetrics, setLoadingMetrics] = useState<boolean>(true);
-  const [results, setResults] = useState<CampaignResult[]>([]);
+  const [results, setResults] = useState<CombinedMetricsResult[]>([]);
   const [campaignInfo, setCampaignInfo] = useState<Campaign | null>(null);
   const [selectedRowMetrics, setSelectedRowMetrics] = useState<{
     month: string;
@@ -91,25 +79,14 @@ export default function CampaignDetailsPage({ params }: PageProps) {
     month: string;
   } | null>(null);
 
-  const fetchCampaignInfo = async () => {
+  const loadCampaignInfo = async () => {
     const accessToken = (session as { accessToken?: string })?.accessToken;
     if (!accessToken || !id) return;
 
     setLoadingInfo(true);
     try {
-      const infoQuery = `SELECT campaign.id, campaign.name, campaign.status FROM campaign WHERE campaign.id = ${id}`;
-      const infoResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/google-ads/search`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({ query: infoQuery }),
-      });
-      const infoData = await infoResponse.json();
-      if (infoData.results && infoData.results.length > 0) {
-        setCampaignInfo(infoData.results[0].campaign);
-      }
+      const info = await fetchCampaignInfo(id, accessToken);
+      setCampaignInfo(info);
     } catch (error) {
       console.error("Erro ao buscar info da campanha:", error);
     } finally {
@@ -117,45 +94,14 @@ export default function CampaignDetailsPage({ params }: PageProps) {
     }
   };
 
-  const fetchCampaignMetrics = async () => {
+  const loadCampaignMetrics = async () => {
     const accessToken = (session as { accessToken?: string })?.accessToken;
     if (!accessToken || !id) return;
 
     setLoadingMetrics(true);
     try {
-      let dateFilter: string;
-      if (startDate && endDate) {
-        const startStr = format(startDate, "yyyy-MM-dd");
-        const endStr = format(endDate, "yyyy-MM-dd");
-        dateFilter = ` AND segments.date BETWEEN '${startStr}' AND '${endStr}'`;
-      } else {
-        const todayStr = format(new Date(), "yyyy-MM-dd");
-        dateFilter = ` AND segments.date BETWEEN '2010-01-01' AND '${todayStr}'`;
-      }
-
-      // Removidos fields metrics.ctr e metrics.average_cpm para evitar erro 400 e calculados no frontend
-      const metricsQuery = `SELECT campaign.id, segments.month, metrics.clicks, metrics.impressions, metrics.average_cpc, metrics.conversions, metrics.cost_per_conversion, metrics.cost_micros FROM campaign WHERE campaign.id = ${id} ${dateFilter} ORDER BY segments.month DESC`;
-
-      const metricsResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/google-ads/search`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({ query: metricsQuery }),
-      });
-
-      if (!metricsResponse.ok) {
-        throw new Error(`Erro na API: ${metricsResponse.status}`);
-      }
-
-      const metricsData: GoogleAdsResponse = await metricsResponse.json();
-
-      if (metricsData.results && metricsData.results.length > 0) {
-        setResults(metricsData.results);
-      } else {
-        setResults([]);
-      }
+      const combinedMetrics = await fetchCombinedMetrics(id, startDate, endDate, accessToken);
+      setResults(combinedMetrics || []);
     } catch (error) {
       console.error("Erro ao buscar métricas da campanha:", error);
       setResults([]);
@@ -166,7 +112,7 @@ export default function CampaignDetailsPage({ params }: PageProps) {
 
   useEffect(() => {
     if ((session as any)?.accessToken) {
-      void fetchCampaignInfo();
+      void loadCampaignInfo();
     } else if (session === null) {
       setLoadingInfo(false);
     }
@@ -174,7 +120,7 @@ export default function CampaignDetailsPage({ params }: PageProps) {
 
   useEffect(() => {
     if ((session as any)?.accessToken) {
-      void fetchCampaignMetrics();
+      void loadCampaignMetrics();
     } else if (session === null) {
       setLoadingMetrics(false);
     }
@@ -182,54 +128,24 @@ export default function CampaignDetailsPage({ params }: PageProps) {
 
   // Totais agregados (Single Pass)
   let totalClicks = 0;
-  let totalConversions = 0;
+  let totalLeads = 0;
+  let totalSales = 0;
   let totalCostMicros = 0;
   let totalImpressions = 0;
 
   for (const result of results) {
-    totalClicks += Number(result.metrics?.clicks || 0);
-    totalConversions += Number(result.metrics?.conversions || 0);
-    totalCostMicros += Number(result.metrics?.costMicros || 0);
-    totalImpressions += Number(result.metrics?.impressions || 0);
+    totalClicks += result.clicks || 0;
+    totalLeads += result.leads || 0;
+    totalSales += result.sales || 0;
+    totalCostMicros += result.costMicros || 0;
+    totalImpressions += result.impressions || 0;
   }
 
   const avgCtr = totalImpressions > 0 ? totalClicks / totalImpressions : 0;
   const avgCpm = totalImpressions > 0 ? (totalCostMicros / totalImpressions) * 1000 : 0;
-  const cplGeral = totalConversions > 0 ? totalCostMicros / totalConversions : 0;
-
-  const formatCurrency = (micros?: number | string) => {
-    if (!micros) return "R$ 0,00";
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(micros) / 1000000);
-  };
-
-  const formatNumber = (num?: number | string) => {
-    if (!num) return "0";
-    return new Intl.NumberFormat('pt-BR').format(Number(num));
-  };
-
-  const formatPercent = (val?: number | string) => {
-    if (val === undefined || val === null) return "0,00%";
-    return new Intl.NumberFormat('pt-BR', { style: 'percent', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(val));
-  };
-
-  // Auxiliares para Status
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case "ENABLED": return "Ativa";
-      case "PAUSED": return "Pausada";
-      case "REMOVED": return "Removida";
-      default: return status;
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "ENABLED": return "bg-emerald-50 text-emerald-700 ring-emerald-600/20";
-      case "PAUSED": return "bg-amber-50 text-amber-700 ring-amber-600/20";
-      case "REMOVED": return "bg-red-50 text-red-700 ring-red-600/20";
-      default: return "bg-slate-50 text-slate-700 ring-slate-600/20";
-    }
-  };
+  
+  // Usar leads para o CPL, ou sales se quiser CPA de vendas. Assumindo leads como primário.
+  const cplGeral = totalLeads > 0 ? totalCostMicros / totalLeads : 0;
 
   return (
       <div className="flex flex-1 flex-col h-full bg-muted/20">
@@ -334,15 +250,27 @@ export default function CampaignDetailsPage({ params }: PageProps) {
               </CardHeader>
             </Card>
           </div>
-          <div className="grid auto-rows-min gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mt-2">
+          <div className="grid auto-rows-min gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4 mt-2">
             <Card>
               <CardHeader className="pb-2">
                 <CardDescription className="flex items-center gap-2 font-medium">
                   <Target className="h-4 w-4 text-emerald-600 dark:text-emerald-500" />
-                  Total de Conversões
+                  Total de Leads
                 </CardDescription>
                 <CardTitle className="text-4xl text-emerald-600 dark:text-emerald-500">
-                  {loadingMetrics ? <Skeleton className="h-10 w-24" /> : formatNumber(Number(totalConversions.toFixed(2)))}
+                  {loadingMetrics ? <Skeleton className="h-10 w-24" /> : formatNumber(Number(totalLeads.toFixed(2)))}
+                </CardTitle>
+              </CardHeader>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-2">
+                <CardDescription className="flex items-center gap-2 font-medium">
+                  <Target className="h-4 w-4 text-emerald-600 dark:text-emerald-500" />
+                  Total de Vendas
+                </CardDescription>
+                <CardTitle className="text-4xl text-emerald-600 dark:text-emerald-500">
+                  {loadingMetrics ? <Skeleton className="h-10 w-24" /> : formatNumber(Number(totalSales.toFixed(2)))}
                 </CardTitle>
               </CardHeader>
             </Card>
@@ -351,7 +279,7 @@ export default function CampaignDetailsPage({ params }: PageProps) {
               <CardHeader className="pb-2">
                 <CardDescription className="flex items-center gap-2 font-medium">
                   <TrendingUp className="h-4 w-4 text-rose-500" />
-                  CPL Médio (CPA)
+                  CPL Médio
                 </CardDescription>
                 <CardTitle className="text-4xl text-rose-600 dark:text-rose-500">
                   {loadingMetrics ? <Skeleton className="h-10 w-24" /> : formatCurrency(cplGeral)}
@@ -380,7 +308,8 @@ export default function CampaignDetailsPage({ params }: PageProps) {
                   <TableHead>Mês</TableHead>
                   <TableHead className="text-right font-bold">Impressões</TableHead>
                   <TableHead className="text-right font-bold">Cliques</TableHead>
-                  <TableHead className="text-right font-bold">Conversões</TableHead>
+                  <TableHead className="text-right font-bold">Leads</TableHead>
+                  <TableHead className="text-right font-bold">Vendas</TableHead>
                   <TableHead className="text-right font-bold">Custo</TableHead>
                   <TableHead className="text-center w-25 font-bold">Ações</TableHead>
                 </TableRow>
@@ -388,7 +317,7 @@ export default function CampaignDetailsPage({ params }: PageProps) {
               <TableBody>
                 {loadingMetrics ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="h-32 text-center">
+                      <TableCell colSpan={7} className="h-32 text-center">
                         <div className="flex justify-center items-center h-full">
                           <span className="text-muted-foreground animate-pulse">Carregando métricas...</span>
                         </div>
@@ -396,26 +325,29 @@ export default function CampaignDetailsPage({ params }: PageProps) {
                     </TableRow>
                 ) : results.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
+                      <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
                         Nenhum dado de métrica encontrado para este período.
                       </TableCell>
                     </TableRow>
                 ) : (
                     results.map((result, index) => {
-                      const conversions = Number(result.metrics?.conversions || 0);
-                      const costPerConversionValid = conversions > 0 && result.metrics?.costPerConversion != null;
+                      const leads = result.leads || 0;
+                      const sales = result.sales || 0;
+                      const costPerConversionValid = leads > 0;
                       
-                      const rowClicks = Number(result.metrics?.clicks || 0);
-                      const rowImpressions = Number(result.metrics?.impressions || 0);
-                      const rowCostMicros = Number(result.metrics?.costMicros || 0);
+                      const rowClicks = result.clicks || 0;
+                      const rowImpressions = result.impressions || 0;
+                      const rowCostMicros = result.costMicros || 0;
                       
                       const rowCtr = rowImpressions > 0 ? rowClicks / rowImpressions : 0;
                       const rowCpm = rowImpressions > 0 ? (rowCostMicros / rowImpressions) * 1000 : 0;
+                      const rowCpl = leads > 0 ? rowCostMicros / leads : 0;
+                      const rowCpc = rowClicks > 0 ? rowCostMicros / rowClicks : 0;
 
                       return (
                           <TableRow key={index}>
                             <TableCell className="font-medium">
-                              {result.segments?.month}
+                              {result.month}
                             </TableCell>
                             <TableCell className="text-right text-muted-foreground">
                               {formatNumber(rowImpressions)}
@@ -424,7 +356,10 @@ export default function CampaignDetailsPage({ params }: PageProps) {
                               {formatNumber(rowClicks)}
                             </TableCell>
                             <TableCell className="text-right text-emerald-600 font-medium">
-                              {conversions > 0 ? conversions.toFixed(2) : "0"}
+                              {leads > 0 ? leads.toFixed(2) : "0"}
+                            </TableCell>
+                            <TableCell className="text-right text-emerald-600 font-medium">
+                              {sales > 0 ? sales.toFixed(2) : "0"}
                             </TableCell>
                             <TableCell className="text-right font-medium text-purple-600">
                               {formatCurrency(rowCostMicros)}
@@ -441,14 +376,14 @@ export default function CampaignDetailsPage({ params }: PageProps) {
                                   <DropdownMenuItem
                                     onClick={() =>
                                       setSelectedRowMetrics({
-                                        month: result.segments?.month || "",
+                                        month: result.month,
                                         impressions: rowImpressions,
                                         clicks: rowClicks,
                                         ctr: rowCtr,
-                                        conversions,
-                                        costPerConversion: result.metrics?.costPerConversion,
+                                        conversions: leads,
+                                        costPerConversion: rowCpl,
                                         costPerConversionValid,
-                                        averageCpc: result.metrics?.averageCpc,
+                                        averageCpc: rowCpc,
                                         cpm: rowCpm,
                                         costMicros: rowCostMicros,
                                       })
@@ -460,7 +395,7 @@ export default function CampaignDetailsPage({ params }: PageProps) {
                                   <DropdownMenuItem
                                     onClick={() =>
                                       setSelectedManualMetricsRow({
-                                        month: result.segments?.month || "",
+                                        month: result.month,
                                       })
                                     }
                                   >
@@ -485,7 +420,10 @@ export default function CampaignDetailsPage({ params }: PageProps) {
                     {formatNumber(totalClicks)}
                   </TableCell>
                   <TableCell className="text-right font-bold">
-                    {totalConversions > 0 ? totalConversions.toFixed(2) : "0"}
+                    {totalLeads > 0 ? totalLeads.toFixed(2) : "0"}
+                  </TableCell>
+                  <TableCell className="text-right font-bold">
+                    {totalSales > 0 ? totalSales.toFixed(2) : "0"}
                   </TableCell>
                   <TableCell colSpan={2}  className="text-center font-bold">
                     <div className="ml-4">
