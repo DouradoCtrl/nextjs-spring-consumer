@@ -19,7 +19,8 @@ interface MetricsDetailsModalProps {
   impressions: number;
   clicks: number;
   ctr: number;
-  conversions: number;
+  conversions: number; // Agora representando Leads
+  sales: number;
   costPerConversion?: number;
   costPerConversionValid: boolean;
   averageCpc?: number;
@@ -37,7 +38,8 @@ export function MetricsDetailsModal({
   impressions,
   clicks,
   ctr,
-  conversions,
+  conversions, // Leads
+  sales,
   costPerConversion,
   costPerConversionValid,
   averageCpc,
@@ -53,8 +55,9 @@ export function MetricsDetailsModal({
     { label: "Impressões", value: formatNumber(impressions) },
     { label: "Cliques", value: formatNumber(clicks) },
     { label: "CTR", value: formatPercent(ctr) },
-    { label: "Conversões", value: conversions > 0 ? conversions.toFixed(2) : "0", color: "text-emerald-600" },
-    { label: "Custo / Conversão", value: costPerConversionValid ? formatCurrency(costPerConversion) : "-" },
+    { label: "Leads", value: conversions > 0 ? conversions.toFixed(2) : "0", color: "text-emerald-600" },
+    { label: "Vendas", value: sales > 0 ? sales.toFixed(2) : "0", color: "text-emerald-600" },
+    { label: "CPL (Custo/Lead)", value: costPerConversionValid ? formatCurrency(costPerConversion) : "-" },
     { label: "CPC Médio", value: averageCpc ? formatCurrency(averageCpc) : "-" },
     { label: "CPM Médio", value: cpm ? formatCurrency(cpm) : "-" },
     { label: "Custo Total", value: formatCurrency(costMicros), color: "text-purple-600", separator: true },
@@ -83,5 +86,3 @@ export function MetricsDetailsModal({
     </Dialog>
   );
 }
-
-
