@@ -48,6 +48,7 @@ interface CombinedMetricsResult {
   costMicros: number;
   leads: number;
   sales: number;
+  hasInternalData: boolean;
 }
 
 export default function CampaignDetailsPage({ params }: PageProps) {
@@ -78,6 +79,9 @@ export default function CampaignDetailsPage({ params }: PageProps) {
   } | null>(null);
   const [selectedManualMetricsRow, setSelectedManualMetricsRow] = useState<{
     month: string;
+    initialLeads: number;
+    initialSales: number;
+    isUpdate: boolean;
   } | null>(null);
 
   const loadCampaignInfo = async () => {
@@ -334,6 +338,7 @@ export default function CampaignDetailsPage({ params }: PageProps) {
                     results.map((result, index) => {
                       const leads = result.leads || 0;
                       const sales = result.sales || 0;
+                      const hasInternalData = result.hasInternalData;
                       const costPerConversionValid = leads > 0;
                       
                       const rowClicks = result.clicks || 0;
@@ -398,6 +403,9 @@ export default function CampaignDetailsPage({ params }: PageProps) {
                                     onClick={() =>
                                       setSelectedManualMetricsRow({
                                         month: result.month,
+                                        initialLeads: leads,
+                                        initialSales: sales,
+                                        isUpdate: hasInternalData,
                                       })
                                     }
                                   >
@@ -465,6 +473,9 @@ export default function CampaignDetailsPage({ params }: PageProps) {
               id={id}
               month={selectedManualMetricsRow.month}
               campaignName={campaignInfo.name}
+              initialLeads={selectedManualMetricsRow.initialLeads}
+              initialSales={selectedManualMetricsRow.initialSales}
+              isUpdate={selectedManualMetricsRow.isUpdate}
               open={!!selectedManualMetricsRow}
               onOpenChange={(open: boolean) => !open && setSelectedManualMetricsRow(null)}
             />

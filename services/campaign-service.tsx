@@ -50,6 +50,7 @@ export async function fetchCombinedMetrics(id: string, startDate: Date | null, e
             costMicros: Number(adItem.metrics.costMicros || 0),
             leads: match?.leads || 0,
             sales: match?.sales || 0,
+            hasInternalData: !!match
         };
     });
 }

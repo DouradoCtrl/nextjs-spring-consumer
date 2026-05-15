@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react"; // Adicionado para controlar os valores
+import { useState, useEffect } from "react"; // Adicionado para controlar os valores
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -21,6 +21,9 @@ interface ManualMetricsModalProps {
   id: string;
   month: string;
   campaignName: string;
+  initialLeads?: number;
+  initialSales?: number;
+  isUpdate?: boolean; // Propriedade para definir se é update ou create
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -29,25 +32,29 @@ export function ManualMetricsModal({
                                      id,
                                      month,
                                      campaignName,
+                                     initialLeads = 0,
+                                     initialSales = 0,
+                                     isUpdate = false,
                                      open,
                                      onOpenChange,
                                    }: ManualMetricsModalProps) {
   // Estados para controlar os números
-  const [leads, setLeads] = useState(0);
-  const [vendas, setVendas] = useState(0);
+  const [leads, setLeads] = useState(initialLeads);
+  const [vendas, setVendas] = useState(initialSales);
+
+  // Atualizar os estados internos caso os valores iniciais mudem
+  useEffect(() => {
+    if (open) {
+      setLeads(initialLeads);
+      setVendas(initialSales);
+    }
+  }, [open, initialLeads, initialSales]);
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const leadsValue = formData.get("leads");
     const vendasValue = formData.get("vendas");
-
-    console.log("Alimentando as métricas manuais: ", {
-      id,
-      month,
-      leads: leadsValue,
-      vendas: vendasValue
-    });
 
     onOpenChange(false);
   };
@@ -144,7 +151,9 @@ export function ManualMetricsModal({
                   Cancelar
                 </Button>
               </DialogClose>
-              <Button type="submit">Alimentar</Button>
+              <Button type="submit">
+                {isUpdate ? "Atualizar" : "Alimentar"}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
