@@ -69,6 +69,7 @@ export default function CampaignDetailsPage({ params }: PageProps) {
     clicks: number;
     ctr: number;
     conversions: number;
+    sales: number;
     costPerConversion?: number;
     costPerConversionValid: boolean;
     averageCpc?: number;
@@ -381,6 +382,7 @@ export default function CampaignDetailsPage({ params }: PageProps) {
                                         clicks: rowClicks,
                                         ctr: rowCtr,
                                         conversions: leads,
+                                        sales: sales,
                                         costPerConversion: rowCpl,
                                         costPerConversionValid,
                                         averageCpc: rowCpc,
@@ -443,6 +445,7 @@ export default function CampaignDetailsPage({ params }: PageProps) {
               clicks={selectedRowMetrics.clicks}
               ctr={selectedRowMetrics.ctr}
               conversions={selectedRowMetrics.conversions}
+              sales={selectedRowMetrics.sales}
               costPerConversion={selectedRowMetrics.costPerConversion}
               costPerConversionValid={selectedRowMetrics.costPerConversionValid}
               averageCpc={selectedRowMetrics.averageCpc}
