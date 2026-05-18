@@ -32,23 +32,35 @@ export const apiFetch = async (endpoint: string, options: ApiOptions = {}) => {
         config.body = JSON.stringify(body);
     }
 
+    const response = await fetch(fullUrl, config);
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`API Error on endpoint '${endpoint}':`, errorText);
+        throw new Error(`API request failed with status ${response.status} on URL ${fullUrl}`);
+    }
+
+    // Apenas retorna null se for resposta vazia (204) ou content-length explicitamente 0
+    if (response.status === 204) {
+        return null;
+    }
+
+    const contentLength = response.headers.get('content-length');
+    if (contentLength === '0') {
+        return null;
+    }
+
+    // Como garantimos que não é 204 e content-length != 0, a reposta deve ter um corpo. 
+    // Em alguns casos o response.text() pode ser vazio (Ex: API retorna 200 OK sem JSON).
+    const textData = await response.text();
+    if (!textData) {
+        return null;
+    }
+
     try {
-        const response = await fetch(fullUrl, config);
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`API Error on endpoint '${endpoint}':`, errorText);
-            throw new Error(`API request failed with status ${response.status} on URL ${fullUrl}`);
-        }
-
-        if (response.status === 204 || !response.headers.get('content-length') || response.headers.get('content-length') === '0') {
-            return null;
-        }
-        
-        return response.json();
-
-    } catch (error) {
-        console.error(`Failed to fetch from ${fullUrl}:`, error);
-        throw error;
+        return JSON.parse(textData);
+    } catch (e) {
+        console.warn(`Response from ${endpoint} could not be parsed as JSON. Returning as text.`, e);
+        return textData;
     }
 };
