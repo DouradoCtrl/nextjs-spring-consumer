@@ -383,10 +383,10 @@ export default function CampaignDetailsPage({ params }: PageProps) {
                               {formatNumber(rowClicks)}
                             </TableCell>
                             <TableCell className="text-right text-emerald-600 font-medium">
-                              {leads > 0 ? leads.toFixed(2) : "0"}
+                              {leads > 0 ? leads.toFixed(0) : "0"}
                             </TableCell>
                             <TableCell className="text-right text-emerald-600 font-medium">
-                              {sales > 0 ? sales.toFixed(2) : "0"}
+                              {sales > 0 ? sales.toFixed(0) : "0"}
                             </TableCell>
                             <TableCell className="text-right font-medium text-purple-600">
                               {formatCurrency(rowCostMicros)}
@@ -451,10 +451,10 @@ export default function CampaignDetailsPage({ params }: PageProps) {
                     {formatNumber(totalClicks)}
                   </TableCell>
                   <TableCell className="text-right font-bold">
-                    {totalLeads > 0 ? totalLeads.toFixed(2) : "0"}
+                    {totalLeads > 0 ? totalLeads.toFixed(0) : "0"}
                   </TableCell>
                   <TableCell className="text-right font-bold">
-                    {totalSales > 0 ? totalSales.toFixed(2) : "0"}
+                    {totalSales > 0 ? totalSales.toFixed(0) : "0"}
                   </TableCell>
                   <TableCell colSpan={2}  className="text-center font-bold">
                     <div className="ml-4">
