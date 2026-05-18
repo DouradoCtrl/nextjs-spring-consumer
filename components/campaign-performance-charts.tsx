@@ -9,8 +9,6 @@ import {
   ResponsiveContainer,
   XAxis,
   YAxis,
-  Tooltip,
-  Legend,
   Line,
   LineChart,
 } from "recharts"
@@ -28,7 +26,8 @@ import {
 import {
   ChartContainer,
   ChartTooltip,
-  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
 } from "@/components/ui/chart"
 import { formatCurrency, formatNumber, formatPercent, formatMonthYear } from "@/lib/format-utils"
 
@@ -61,7 +60,6 @@ export function CampaignPerformanceCharts({
     const cost = item.costMicros || 0;
     const cpc = item.clicks > 0 ? cost / item.clicks : 0;
     const cpl = item.leads > 0 ? cost / item.leads : 0;
-    // Removida a multiplicação por 100, pois formatPercent já trata isso
     const ctr = item.impressions > 0 ? (item.clicks / item.impressions) : 0;
 
     return {
@@ -79,8 +77,13 @@ export function CampaignPerformanceCharts({
   }
 
   const efficiencyConfig = {
-    cpl: { label: "CPL (R$)", color: "#ef4444" },
-    cpc: { label: "CPC (R$)", color: "#3b82f6" },
+    cpl: { label: "CPL", color: "#ef4444" },
+    cpc: { label: "CPC", color: "#3b82f6" },
+  }
+
+  const trafficConfig = {
+    clicks: { label: "Cliques", color: "#3b82f6" },
+    impressions: { label: "Impressões", color: "#8b5cf6" },
   }
 
   const dateRangeStr = startDate && endDate 
@@ -115,7 +118,7 @@ export function CampaignPerformanceCharts({
           <CardDescription>Evolução mensal de Leads e Vendas ({dateRangeStr})</CardDescription>
         </CardHeader>
         <CardContent className="flex-1 pb-4">
-          <ChartContainer config={conversionsConfig} className="h-[300px] w-full">
+          <ChartContainer config={conversionsConfig} className="h-72 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart
                 data={chartData}
@@ -149,16 +152,16 @@ export function CampaignPerformanceCharts({
                   content={({ active, payload, label }) => {
                     if (active && payload && payload.length) {
                       return (
-                        <div className="rounded-lg border bg-background p-3 shadow-sm min-w-[150px]">
+                        <div className="rounded-lg border border-border/50 bg-background px-3 py-2 text-sm shadow-xl min-w-40">
                           <div className="font-semibold mb-2">{label}</div>
                           <div className="grid gap-2">
                             {payload.map((entry, index) => (
                               <div key={index} className="flex justify-between items-center gap-4">
                                 <div className="flex items-center gap-2">
-                                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
-                                  <span className="text-sm text-muted-foreground">{entry.name}</span>
+                                  <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: entry.color }} />
+                                  <span className="text-muted-foreground">{entry.name}</span>
                                 </div>
-                                <span className="font-bold">{formatNumber(entry.value as number)}</span>
+                                <span className="font-bold font-mono tabular-nums">{formatNumber(entry.value as number)}</span>
                               </div>
                             ))}
                           </div>
@@ -168,7 +171,7 @@ export function CampaignPerformanceCharts({
                     return null
                   }}
                 />
-                <Legend verticalAlign="top" height={36} iconType="circle" />
+                <ChartLegend verticalAlign="top" height={36} content={<ChartLegendContent />} />
                 <Area 
                   type="monotone" 
                   dataKey="leads" 
@@ -214,7 +217,7 @@ export function CampaignPerformanceCharts({
           <CardDescription>Oscilação do CPL e CPC ao longo do tempo ({dateRangeStr})</CardDescription>
         </CardHeader>
         <CardContent className="flex-1 pb-4">
-          <ChartContainer config={efficiencyConfig} className="h-[300px] w-full">
+          <ChartContainer config={efficiencyConfig} className="h-72 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart
                 data={chartData}
@@ -247,19 +250,20 @@ export function CampaignPerformanceCharts({
                   width={60}
                 />
                 <ChartTooltip 
+                  cursor={{ stroke: 'rgba(0,0,0,0.1)', strokeWidth: 2 }}
                   content={({ active, payload, label }) => {
                     if (active && payload && payload.length) {
                       return (
-                        <div className="rounded-lg border bg-background p-3 shadow-sm min-w-[180px]">
+                        <div className="rounded-lg border border-border/50 bg-background px-3 py-2 text-sm shadow-xl min-w-40">
                           <div className="font-semibold mb-2">{label}</div>
                           <div className="grid gap-2">
                             {payload.map((entry, index) => (
                               <div key={index} className="flex justify-between items-center gap-4">
                                 <div className="flex items-center gap-2">
-                                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
-                                  <span className="text-sm text-muted-foreground">{entry.name}</span>
+                                  <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: entry.color }} />
+                                  <span className="text-muted-foreground">{entry.name}</span>
                                 </div>
-                                <span className="font-bold">{formatCurrency(entry.value as number)}</span>
+                                <span className="font-bold font-mono tabular-nums">{formatCurrency(entry.value as number)}</span>
                               </div>
                             ))}
                           </div>
@@ -269,7 +273,7 @@ export function CampaignPerformanceCharts({
                     return null
                   }}
                 />
-                <Legend verticalAlign="top" height={36} iconType="circle" />
+                <ChartLegend verticalAlign="top" height={36} content={<ChartLegendContent />} />
                 <Line 
                   yAxisId="left"
                   type="monotone" 
@@ -315,7 +319,7 @@ export function CampaignPerformanceCharts({
           <CardDescription>Volume de atração de usuários ({dateRangeStr})</CardDescription>
         </CardHeader>
         <CardContent className="flex-1 pb-4">
-          <ChartContainer config={{ clicks: { label: "Cliques", color: "#3b82f6" }, impressions: { label: "Impressões", color: "#8b5cf6" } }} className="h-[250px] w-full">
+          <ChartContainer config={trafficConfig} className="h-72 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={chartData}
@@ -343,26 +347,31 @@ export function CampaignPerformanceCharts({
                   tickFormatter={(val) => formatNumber(val)}
                   width={50}
                 />
+                {/* 
+                  Usando Tooltip customizado aqui especificamente porque o ChartTooltipContent do Shadcn
+                  não permite injetar uma linha extra formatada como porcentagem (o CTR) de forma simples 
+                  quando as barras do gráfico são números absolutos.
+                */}
                 <ChartTooltip 
                   cursor={{ fill: 'rgba(0,0,0,0.05)' }}
                   content={({ active, payload, label }) => {
                     if (active && payload && payload.length) {
                       return (
-                        <div className="rounded-lg border bg-background p-3 shadow-sm min-w-[150px]">
+                        <div className="rounded-lg border border-border/50 bg-background px-3 py-2 text-sm shadow-xl min-w-40">
                           <div className="font-semibold mb-2">{label}</div>
                           <div className="grid gap-2">
                             {payload.map((entry, index) => (
                               <div key={index} className="flex justify-between items-center gap-4">
                                 <div className="flex items-center gap-2">
-                                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
-                                  <span className="text-sm text-muted-foreground">{entry.name}</span>
+                                  <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: entry.color }} />
+                                  <span className="text-muted-foreground">{entry.name}</span>
                                 </div>
-                                <span className="font-bold">{formatNumber(entry.value as number)}</span>
+                                <span className="font-bold font-mono tabular-nums">{formatNumber(entry.value as number)}</span>
                               </div>
                             ))}
                             <div className="border-t pt-2 mt-1 flex justify-between items-center gap-4">
-                                <span className="text-sm text-muted-foreground font-medium">CTR</span>
-                                <span className="font-bold">
+                                <span className="text-muted-foreground font-medium">CTR</span>
+                                <span className="font-bold font-mono text-emerald-600 tabular-nums">
                                   {formatPercent(payload[0].payload.ctr)}
                                 </span>
                             </div>
@@ -373,7 +382,7 @@ export function CampaignPerformanceCharts({
                     return null
                   }}
                 />
-                <Legend verticalAlign="top" height={36} iconType="circle" />
+                <ChartLegend verticalAlign="top" height={36} content={<ChartLegendContent />} />
                 <Bar yAxisId="left" dataKey="clicks" name="Cliques" fill="var(--color-clicks)" radius={[4, 4, 0, 0]} maxBarSize={40} />
                 <Bar yAxisId="right" dataKey="impressions" name="Impressões" fill="var(--color-impressions)" radius={[4, 4, 0, 0]} maxBarSize={40} />
               </BarChart>
