@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/chart"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
+import { fetchMonthlyChartMetrics } from "@/services/campaign-service"
 
 const chartConfig = {
     clicks: { label: "Cliques", color: "#3b82f6", icon: MousePointerClick },
@@ -62,29 +63,16 @@ export function CampaignMonthlyChart({ accessToken, startDate, endDate, classNam
     }
 
     useEffect(() => {
-        const fetchMonthlyMetrics = async () => {
+        const loadMonthlyMetrics = async () => {
             if (!accessToken || !startDate || !endDate) return
 
             setLoading(true)
-            const startStr = format(startDate, "yyyy-MM-dd")
-            const endStr = format(endDate, "yyyy-MM-dd")
 
             try {
-                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/google-ads/search`, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        Authorization: `Bearer ${accessToken}`,
-                    },
-                    body: JSON.stringify({
-                        query: `SELECT metrics.clicks, metrics.impressions, metrics.average_cpc, metrics.cost_micros, segments.month FROM customer WHERE segments.date BETWEEN '${startStr}' AND '${endStr}'`
-                    }),
-                })
+                const results = await fetchMonthlyChartMetrics(accessToken, startDate, endDate)
 
-                const json = await response.json()
-
-                if (json.results) {
-                    const formattedData = json.results.map((item: any) => {
+                if (results.length > 0) {
+                    const formattedData = results.map((item: any) => {
                         const date = parseISO(item.segments.month)
                         return {
                             month: format(date, "MMM/yy", { locale: ptBR }),
@@ -108,7 +96,7 @@ export function CampaignMonthlyChart({ accessToken, startDate, endDate, classNam
             }
         }
 
-        fetchMonthlyMetrics()
+        loadMonthlyMetrics()
     }, [accessToken, startDate, endDate])
 
     if (loading) {
