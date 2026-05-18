@@ -13,6 +13,7 @@ import {
   TableCell,
   TableRow,
 } from "@/components/ui/table";
+import { formatMonthYear } from "@/lib/format-utils";
 
 interface MetricsDetailsModalProps {
   month: string;
@@ -68,7 +69,7 @@ export function MetricsDetailsModal({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Métricas Detalhadas</DialogTitle>
-          <DialogDescription>Desempenho da campanha em {month}</DialogDescription>
+          <DialogDescription className="capitalize">Desempenho da campanha em {formatMonthYear(month)}</DialogDescription>
         </DialogHeader>
         <Table>
           <TableBody>

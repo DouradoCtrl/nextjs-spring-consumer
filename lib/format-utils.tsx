@@ -20,3 +20,20 @@ export const getStatusColor = (status: string) => {
     };
     return map[status] || "bg-slate-50 text-slate-700 ring-slate-600/20";
 };
+
+export const formatMonthYear = (monthString: string) => {
+    if (!monthString) return "";
+    
+    // Supondo o formato "YYYY-MM"
+    const parts = monthString.split('-');
+    if (parts.length !== 2) return monthString; // Retorna original se não for o formato esperado
+    
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1; // Meses no JS vão de 0 a 11
+    
+    const date = new Date(year, month);
+    
+    // Capitaliza a primeira letra: "janeiro de 2024" -> "Janeiro de 2024"
+    const formatted = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(date);
+    return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+};

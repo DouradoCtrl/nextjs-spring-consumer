@@ -31,7 +31,7 @@ import { QuickFilters } from "@/components/quick-filters";
 import { AdvancedFilters } from "@/components/advanced-filters";
 import { ManualMetricsModal } from "@/components/manual-metrics-modal";
 import { fetchCampaignInfo, fetchCombinedMetrics, upsertCampaignMetrics } from "@/services/campaign-service";
-import { formatCurrency, formatNumber, formatPercent, getStatusText, getStatusColor } from "@/lib/format-utils";
+import { formatCurrency, formatNumber, formatPercent, getStatusText, getStatusColor, formatMonthYear } from "@/lib/format-utils";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -349,8 +349,8 @@ export default function CampaignDetailsPage({ params }: PageProps) {
 
                 return (
                     <TableRow key={index}>
-                      <TableCell className="font-medium">
-                        {result.month}
+                      <TableCell className="font-medium capitalize">
+                        {formatMonthYear(result.month)}
                       </TableCell>
                       <TableCell className="text-right text-muted-foreground">
                         {formatNumber(rowImpressions)}

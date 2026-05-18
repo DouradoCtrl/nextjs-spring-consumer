@@ -15,6 +15,7 @@ import { Field, FieldGroup } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Minus, Plus } from "lucide-react";
+import { formatMonthYear } from "@/lib/format-utils";
 
 interface ManualMetricsModalProps {
   id: string;
@@ -74,7 +75,7 @@ export function ManualMetricsModal({
                 {isUpdate ? "Atualizar Métricas" : "Alimentar Métricas"}
               </DialogTitle>
               <DialogDescription>
-                Preencha os dados da campanha <strong>{campaignName}</strong> para o mês de <strong>{month}</strong>.
+                Preencha os dados da campanha <strong>{campaignName}</strong> para o mês de <strong className="capitalize">{formatMonthYear(month)}</strong>.
               </DialogDescription>
             </DialogHeader>
 
