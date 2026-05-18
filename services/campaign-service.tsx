@@ -102,3 +102,39 @@ export async function fetchGeneralMetrics(accessToken: string, startDate: Date |
 
     return data?.results?.[0]?.metrics || null;
 }
+
+export async function upsertCampaignMetrics({
+    campaignId,
+    month,
+    leads,
+    sales,
+    isUpdate,
+    accessToken
+
+}: {
+    campaignId: string;
+    month: string;
+    leads: number;
+    sales: number;
+    isUpdate: boolean;
+    accessToken: string;
+}) {
+    const endpoint = isUpdate
+        ? '/google-ads/campaign-stats/update'
+        : '/google-ads/campaign-stats/create';
+
+    const method = isUpdate ? 'PUT' : 'POST';
+
+    const referenceDate = month.length === 7 ? `${month}-01` : month;
+
+    return await apiFetch(endpoint, {
+        method,
+        accessToken,
+        body: {
+            campaignId,
+            referenceDate,
+            leads,
+            sales
+        }
+    })
+}
