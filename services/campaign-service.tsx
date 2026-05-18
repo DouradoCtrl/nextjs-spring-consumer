@@ -19,7 +19,7 @@ export async function fetchCombinedMetrics(id: string, startDate: Date | null, e
 
     const adsQuery = `SELECT segments.month, metrics.clicks, metrics.impressions, metrics.cost_micros FROM campaign WHERE campaign.id = ${id} AND segments.date BETWEEN '${startStr}' AND '${endStr}' ORDER BY segments.month DESC`;
 
-    const [adsData, internalStats] = await Promise.all([
+    const [adsData, campaingStat] = await Promise.all([
         apiFetch('/google-ads/search', {
             method: 'POST',
             accessToken,
@@ -32,7 +32,7 @@ export async function fetchCombinedMetrics(id: string, startDate: Date | null, e
     ]);
 
     const googleResults = adsData?.results || [];
-    const safeInternalStats = Array.isArray(internalStats) ? internalStats : [];
+    const safeCampaingStat = Array.isArray(campaingStat) ? campaingStat : [];
 
     // Fazendo o merge omitindo o dia do Google Ads
     return googleResults.map((adItem: any) => {
@@ -40,7 +40,7 @@ export async function fetchCombinedMetrics(id: string, startDate: Date | null, e
         const monthKey = adItem.segments.month.substring(0, 7);
 
         // Procura na sua lista do Spring Boot pelo mês correspondente
-        const match = safeInternalStats.find((s: any) => s.referenceDate === monthKey);
+        const match = safeCampaingStat.find((s: any) => s.referenceDate === monthKey);
 
         return {
             month: monthKey, // Agora exposto apenas como YYYY-MM
