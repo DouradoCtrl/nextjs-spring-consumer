@@ -61,7 +61,8 @@ export function CampaignPerformanceCharts({
     const cost = item.costMicros || 0;
     const cpc = item.clicks > 0 ? cost / item.clicks : 0;
     const cpl = item.leads > 0 ? cost / item.leads : 0;
-    const ctr = item.impressions > 0 ? (item.clicks / item.impressions) * 100 : 0;
+    // Removida a multiplicação por 100, pois formatPercent já trata isso
+    const ctr = item.impressions > 0 ? (item.clicks / item.impressions) : 0;
 
     return {
       ...item,
@@ -69,7 +70,6 @@ export function CampaignPerformanceCharts({
       cpc,
       cpl,
       ctr,
-      // Usado para garantir que a barra do custo na mesma escala fique compreensível, ou eixos separados
     };
   });
 
