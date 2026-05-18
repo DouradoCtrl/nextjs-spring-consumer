@@ -22,7 +22,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { QuickFilters } from "@/components/quick-filters";
 import { AdvancedFilters } from "@/components/advanced-filters";
 import { InvestmentProgress } from "@/components/investment-progress";
-import {CampaignMonthlyChart} from "@/components/campaign-monthly-chart";
+import { CampaignMonthlyChart } from "@/components/campaign-monthly-chart";
+import { fetchCampaignsWithMetrics, fetchGeneralMetrics } from "@/services/campaign-service";
 
 interface Campaign {
   resourceName: string;
@@ -41,20 +42,6 @@ interface Metrics {
 interface CampaignResult {
   campaign: Campaign;
   metrics?: Metrics;
-}
-
-interface CustomerResult {
-  metrics: Metrics;
-}
-
-interface GoogleAdsResponse {
-  results: CampaignResult[];
-  fieldMask?: string;
-  queryResourceConsumption?: string;
-}
-
-interface GoogleAdsCustomerResponse {
-  results: CustomerResult[];
 }
 
 const formatCurrency = (micros?: string | number) => {
@@ -94,69 +81,35 @@ export default function Page() {
 
   useEffect(() => {
     const accessToken = (session as any)?.accessToken;
-    if (accessToken) {
-      setLoading(true);
-
-      let dateFilter = "";
-      if (startDate && endDate) {
-        const startStr = format(startDate, "yyyy-MM-dd");
-        const endStr = format(endDate, "yyyy-MM-dd");
-        dateFilter = ` AND segments.date BETWEEN '${startStr}' AND '${endStr}'`;
-      }
-
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/google-ads/search`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({
-          query: `SELECT campaign.id, campaign.name, campaign.status, metrics.clicks, metrics.impressions, metrics.average_cpc, metrics.cost_micros FROM campaign WHERE campaign.status != 'REMOVED'${dateFilter}`,
-        }),
-      })
-        .then((res) => res.json())
-        .then((data: GoogleAdsResponse) => {
-          if (data.results) {
-            setCampaigns(data.results);
-          } else {
-            setCampaigns([]);
-          }
-        })
-        .catch((error) => console.error("Erro ao buscar campanhas:", error))
-        .finally(() => setLoading(false));
-
-      setLoadingMetrics(true);
-      
-      let customerQuery = "SELECT metrics.clicks, metrics.impressions, metrics.average_cpc, metrics.cost_micros FROM customer";
-      if (dateFilter) {
-          customerQuery = `SELECT metrics.clicks, metrics.impressions, metrics.average_cpc, metrics.cost_micros FROM customer WHERE segments.date BETWEEN '${format(startDate!, "yyyy-MM-dd")}' AND '${format(endDate!, "yyyy-MM-dd")}'`;
-      }
-
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/google-ads/search`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({
-          query: customerQuery,
-        }),
-      })
-        .then((res) => res.json())
-        .then((data: GoogleAdsCustomerResponse) => {
-          if (data.results && data.results.length > 0) {
-            console.log(data.results);
-            setGeneralMetrics(data.results[0].metrics);
-          } else {
-            setGeneralMetrics(null);
-          }
-        })
-        .catch((error) => console.error("Erro ao buscar métricas gerais:", error))
-        .finally(() => setLoadingMetrics(false));
-    } else if (session === null) {
-      setLoading(false);
-      setLoadingMetrics(false);
+    if (!accessToken) {
+        if (session === null) { // Session is loaded, but no token
+            setLoading(false);
+            setLoadingMetrics(false);
+        }
+        return;
     }
+
+    const loadData = async () => {
+        setLoading(true);
+        setLoadingMetrics(true);
+        try {
+            const [campaignsData, metricsData] = await Promise.all([
+                fetchCampaignsWithMetrics(accessToken, startDate, endDate),
+                fetchGeneralMetrics(accessToken, startDate, endDate)
+            ]);
+            setCampaigns(campaignsData || []);
+            setGeneralMetrics(metricsData || null);
+        } catch (error) {
+            console.error("Erro ao buscar dados do Google Ads:", error);
+            setCampaigns([]);
+            setGeneralMetrics(null);
+        } finally {
+            setLoading(false);
+            setLoadingMetrics(false);
+        }
+    };
+
+    loadData();
   }, [session, startDate, endDate]);
 
   const activeCampaigns = campaigns.filter(
