@@ -572,7 +572,7 @@ export default function CampaignDetailsPage({ params }: PageProps) {
                   <span className="text-muted-foreground animate-pulse">Carregando gráficos...</span>
                 </div>
               ) : results.length > 0 ? (
-                <div className="mt-4">
+                <div className="mt-2">
                   <CampaignPerformanceCharts
                     data={results}
                     startDate={startDate}
