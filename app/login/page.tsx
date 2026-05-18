@@ -13,7 +13,7 @@ export default function LoginPage() {
           </div>
         </div>
       </div>
-      <div className="relative hidden bg-neutral-900 lg:block">
+      <div className="relative bg-neutral-200 hidden dark:bg-neutral-900 lg:block">
         <img
           src="Business Plan-amico dark.svg"
           alt="Image"
