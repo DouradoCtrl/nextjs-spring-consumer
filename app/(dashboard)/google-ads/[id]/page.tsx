@@ -302,6 +302,147 @@ export default function CampaignDetailsPage({ params }: PageProps) {
     </Card>
   );
 
+  const MetricsTable = () => (
+    <div className="rounded-xl border bg-card text-card-foreground shadow-sm overflow-hidden mt-2">
+      <Table>
+        <TableHeader>
+          <TableRow className="hover:bg-transparent bg-muted/50">
+            <TableHead>Mês</TableHead>
+            <TableHead className="text-right font-bold">Impressões</TableHead>
+            <TableHead className="text-right font-bold">Cliques</TableHead>
+            <TableHead className="text-right font-bold">Leads</TableHead>
+            <TableHead className="text-right font-bold">Vendas</TableHead>
+            <TableHead className="text-right font-bold">Custo</TableHead>
+            <TableHead className="text-center w-25 font-bold">Ações</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {loadingMetrics ? (
+              <TableRow>
+                <TableCell colSpan={7} className="h-32 text-center">
+                  <div className="flex justify-center items-center h-full">
+                    <span className="text-muted-foreground animate-pulse">Carregando métricas...</span>
+                  </div>
+                </TableCell>
+              </TableRow>
+          ) : results.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
+                  Nenhum dado de métrica encontrado para este período.
+                </TableCell>
+              </TableRow>
+          ) : (
+              results.map((result, index) => {
+                const leads = result.leads || 0;
+                const sales = result.sales || 0;
+                const hasInternalData = result.hasInternalData;
+                const costPerConversionValid = leads > 0;
+
+                const rowClicks = result.clicks || 0;
+                const rowImpressions = result.impressions || 0;
+                const rowCostMicros = result.costMicros || 0;
+
+                const rowCtr = rowImpressions > 0 ? rowClicks / rowImpressions : 0;
+                const rowCpm = rowImpressions > 0 ? (rowCostMicros / rowImpressions) * 1000 : 0;
+                const rowCpl = leads > 0 ? rowCostMicros / leads : 0;
+                const rowCpc = rowClicks > 0 ? rowCostMicros / rowClicks : 0;
+
+                return (
+                    <TableRow key={index}>
+                      <TableCell className="font-medium">
+                        {result.month}
+                      </TableCell>
+                      <TableCell className="text-right text-muted-foreground">
+                        {formatNumber(rowImpressions)}
+                      </TableCell>
+                      <TableCell className="text-right text-muted-foreground">
+                        {formatNumber(rowClicks)}
+                      </TableCell>
+                      <TableCell className="text-right text-emerald-600 font-medium">
+                        {leads > 0 ? leads.toFixed(0) : "0"}
+                      </TableCell>
+                      <TableCell className="text-right text-emerald-600 font-medium">
+                        {sales > 0 ? sales.toFixed(0) : "0"}
+                      </TableCell>
+                      <TableCell className="text-right font-medium text-purple-600">
+                        {formatCurrency(rowCostMicros)}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreVertical className="h-4 w-4" />
+                              <span className="sr-only">Abrir menu</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-40">
+                            <DropdownMenuItem
+                                onClick={() =>
+                                    setSelectedRowMetrics({
+                                      month: result.month,
+                                      impressions: rowImpressions,
+                                      clicks: rowClicks,
+                                      ctr: rowCtr,
+                                      conversions: leads,
+                                      sales: sales,
+                                      costPerConversion: rowCpl,
+                                      costPerConversionValid,
+                                      averageCpc: rowCpc,
+                                      cpm: rowCpm,
+                                      costMicros: rowCostMicros,
+                                    })
+                                }
+                            >
+                              <Eye/>
+                              Detalhes
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                                onClick={() =>
+                                    setSelectedManualMetricsRow({
+                                      month: result.month,
+                                      initialLeads: leads,
+                                      initialSales: sales,
+                                      isUpdate: hasInternalData,
+                                    })
+                                }
+                            >
+                              <SquarePen />
+                              Métricas
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                );
+              })
+          )}
+        </TableBody>
+        <TableFooter>
+          <TableRow className="hover:bg-transparent">
+            <TableCell className="font-bold">Total</TableCell>
+            <TableCell className="text-right font-bold">
+              {formatNumber(totalImpressions)}
+            </TableCell>
+            <TableCell className="text-right font-bold">
+              {formatNumber(totalClicks)}
+            </TableCell>
+            <TableCell className="text-right font-bold">
+              {totalLeads > 0 ? totalLeads.toFixed(0) : "0"}
+            </TableCell>
+            <TableCell className="text-right font-bold">
+              {totalSales > 0 ? totalSales.toFixed(0) : "0"}
+            </TableCell>
+            <TableCell colSpan={2}  className="text-center font-bold">
+              <div className="ml-4">
+                {formatCurrency(totalCostMicros)}
+              </div>
+            </TableCell>
+          </TableRow>
+        </TableFooter>
+      </Table>
+    </div>
+  );
+
   return (
       <div className="flex flex-1 flex-col h-full bg-muted/20">
         <Header>
@@ -413,145 +554,24 @@ export default function CampaignDetailsPage({ params }: PageProps) {
             </TabsContent>
           </Tabs>
 
-          {/* Tabela de Desempenho por Mês (Visão Resumida) */}
-          <div className="rounded-xl border bg-card text-card-foreground shadow-sm overflow-hidden mt-2">
-            <Table>
-              <TableHeader>
-                <TableRow className="hover:bg-transparent bg-muted/50">
-                  <TableHead>Mês</TableHead>
-                  <TableHead className="text-right font-bold">Impressões</TableHead>
-                  <TableHead className="text-right font-bold">Cliques</TableHead>
-                  <TableHead className="text-right font-bold">Leads</TableHead>
-                  <TableHead className="text-right font-bold">Vendas</TableHead>
-                  <TableHead className="text-right font-bold">Custo</TableHead>
-                  <TableHead className="text-center w-25 font-bold">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loadingMetrics ? (
-                    <TableRow>
-                      <TableCell colSpan={7} className="h-32 text-center">
-                        <div className="flex justify-center items-center h-full">
-                          <span className="text-muted-foreground animate-pulse">Carregando métricas...</span>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                ) : results.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
-                        Nenhum dado de métrica encontrado para este período.
-                      </TableCell>
-                    </TableRow>
-                ) : (
-                    results.map((result, index) => {
-                      const leads = result.leads || 0;
-                      const sales = result.sales || 0;
-                      const hasInternalData = result.hasInternalData;
-                      const costPerConversionValid = leads > 0;
-
-                      const rowClicks = result.clicks || 0;
-                      const rowImpressions = result.impressions || 0;
-                      const rowCostMicros = result.costMicros || 0;
-
-                      const rowCtr = rowImpressions > 0 ? rowClicks / rowImpressions : 0;
-                      const rowCpm = rowImpressions > 0 ? (rowCostMicros / rowImpressions) * 1000 : 0;
-                      const rowCpl = leads > 0 ? rowCostMicros / leads : 0;
-                      const rowCpc = rowClicks > 0 ? rowCostMicros / rowClicks : 0;
-
-                      return (
-                          <TableRow key={index}>
-                            <TableCell className="font-medium">
-                              {result.month}
-                            </TableCell>
-                            <TableCell className="text-right text-muted-foreground">
-                              {formatNumber(rowImpressions)}
-                            </TableCell>
-                            <TableCell className="text-right text-muted-foreground">
-                              {formatNumber(rowClicks)}
-                            </TableCell>
-                            <TableCell className="text-right text-emerald-600 font-medium">
-                              {leads > 0 ? leads.toFixed(0) : "0"}
-                            </TableCell>
-                            <TableCell className="text-right text-emerald-600 font-medium">
-                              {sales > 0 ? sales.toFixed(0) : "0"}
-                            </TableCell>
-                            <TableCell className="text-right font-medium text-purple-600">
-                              {formatCurrency(rowCostMicros)}
-                            </TableCell>
-                            <TableCell className="text-center">
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                                    <MoreVertical className="h-4 w-4" />
-                                    <span className="sr-only">Abrir menu</span>
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-40">
-                                  <DropdownMenuItem
-                                      onClick={() =>
-                                          setSelectedRowMetrics({
-                                            month: result.month,
-                                            impressions: rowImpressions,
-                                            clicks: rowClicks,
-                                            ctr: rowCtr,
-                                            conversions: leads,
-                                            sales: sales,
-                                            costPerConversion: rowCpl,
-                                            costPerConversionValid,
-                                            averageCpc: rowCpc,
-                                            cpm: rowCpm,
-                                            costMicros: rowCostMicros,
-                                          })
-                                      }
-                                  >
-                                    <Eye/>
-                                    Detalhes
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                      onClick={() =>
-                                          setSelectedManualMetricsRow({
-                                            month: result.month,
-                                            initialLeads: leads,
-                                            initialSales: sales,
-                                            isUpdate: hasInternalData,
-                                          })
-                                      }
-                                  >
-                                    <SquarePen />
-                                    Métricas
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </TableCell>
-                          </TableRow>
-                      );
-                    })
-                )}
-              </TableBody>
-              <TableFooter>
-                <TableRow className="hover:bg-transparent">
-                  <TableCell className="font-bold">Total</TableCell>
-                  <TableCell className="text-right font-bold">
-                    {formatNumber(totalImpressions)}
-                  </TableCell>
-                  <TableCell className="text-right font-bold">
-                    {formatNumber(totalClicks)}
-                  </TableCell>
-                  <TableCell className="text-right font-bold">
-                    {totalLeads > 0 ? totalLeads.toFixed(0) : "0"}
-                  </TableCell>
-                  <TableCell className="text-right font-bold">
-                    {totalSales > 0 ? totalSales.toFixed(0) : "0"}
-                  </TableCell>
-                  <TableCell colSpan={2}  className="text-center font-bold">
-                    <div className="ml-4">
-                      {formatCurrency(totalCostMicros)}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              </TableFooter>
-            </Table>
-          </div>
+          {/* Dados Detalhados Tabs (Tabela vs Gráficos) */}
+          <Tabs defaultValue="tabela" className="w-full mt-2">
+            <TabsList className="mb-4">
+              <TabsTrigger value="tabela">Tabela de Desempenho</TabsTrigger>
+              <TabsTrigger value="graficos">Gráfico de Desempenho</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="tabela" className="mt-0">
+              <MetricsTable />
+            </TabsContent>
+            
+            <TabsContent value="graficos" className="mt-0">
+              {/* O conteúdo do gráfico será implementado aqui posteriormente, recebendo as datas, etc */}
+              <div className="rounded-xl border bg-card text-card-foreground shadow-sm overflow-hidden mt-2 p-8 flex justify-center items-center h-64">
+                <span className="text-muted-foreground">Em breve: Visualização em gráficos</span>
+              </div>
+            </TabsContent>
+          </Tabs>
 
           {/* Modal de Detalhes */}
           {selectedRowMetrics && (
