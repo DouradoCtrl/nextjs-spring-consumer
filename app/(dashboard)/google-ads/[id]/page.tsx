@@ -24,6 +24,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { MousePointerClick, Target, DollarSign, Eye, Percent, Activity, TrendingUp, MoreVertical, SquarePen } from "lucide-react";
 import { MetricsDetailsModal } from "@/components/metrics-details-modal";
+import { CampaignPerformanceCharts } from "@/components/campaign-performance-charts";
 
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -566,10 +567,23 @@ export default function CampaignDetailsPage({ params }: PageProps) {
             </TabsContent>
             
             <TabsContent value="graficos" className="mt-0">
-              {/* O conteúdo do gráfico será implementado aqui posteriormente, recebendo as datas, etc */}
-              <div className="rounded-xl border bg-card text-card-foreground shadow-sm overflow-hidden mt-2 p-8 flex justify-center items-center h-64">
-                <span className="text-muted-foreground">Em breve: Visualização em gráficos</span>
-              </div>
+              {loadingMetrics ? (
+                <div className="rounded-xl border bg-card text-card-foreground shadow-sm overflow-hidden mt-2 p-8 flex justify-center items-center h-64">
+                  <span className="text-muted-foreground animate-pulse">Carregando gráficos...</span>
+                </div>
+              ) : results.length > 0 ? (
+                <div className="mt-4">
+                  <CampaignPerformanceCharts
+                    data={results}
+                    startDate={startDate}
+                    endDate={endDate}
+                  />
+                </div>
+              ) : (
+                <div className="rounded-xl border bg-card text-card-foreground shadow-sm overflow-hidden mt-2 p-8 flex justify-center items-center h-64">
+                  <span className="text-muted-foreground">Nenhum dado encontrado para gerar gráficos.</span>
+                </div>
+              )}
             </TabsContent>
           </Tabs>
 
