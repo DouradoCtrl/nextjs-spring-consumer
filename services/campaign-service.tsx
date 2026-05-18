@@ -1,16 +1,16 @@
 import { format } from "date-fns";
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+import { apiFetch } from "./api";
 
 export async function fetchCampaignInfo(id: string, accessToken: string) {
     const infoQuery = `SELECT campaign.id, campaign.name, campaign.status FROM campaign WHERE campaign.id = ${id}`;
-    const response = await fetch(`${API_BASE_URL}/google-ads/search`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
-        body: JSON.stringify({ query: infoQuery }),
+    
+    const data = await apiFetch('/google-ads/search', {
+        method: 'POST',
+        accessToken,
+        body: { query: infoQuery }
     });
-    const data = await response.json();
-    return data.results?.[0]?.campaign || null;
+
+    return data?.results?.[0]?.campaign || null;
 }
 
 export async function fetchCombinedMetrics(id: string, startDate: Date | null, endDate: Date | null, accessToken: string) {
@@ -19,21 +19,20 @@ export async function fetchCombinedMetrics(id: string, startDate: Date | null, e
 
     const adsQuery = `SELECT segments.month, metrics.clicks, metrics.impressions, metrics.cost_micros FROM campaign WHERE campaign.id = ${id} AND segments.date BETWEEN '${startStr}' AND '${endStr}' ORDER BY segments.month DESC`;
 
-    const [adsRes, internalRes] = await Promise.all([
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/google-ads/search`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
-            body: JSON.stringify({ query: adsQuery }),
+    const [adsData, internalStats] = await Promise.all([
+        apiFetch('/google-ads/search', {
+            method: 'POST',
+            accessToken,
+            body: { query: adsQuery }
         }),
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/google-ads/campaign-stats/id/${id}?startDate=${startStr}&endDate=${endStr}`, {
-            headers: { Authorization: `Bearer ${accessToken}` },
+        apiFetch(`/google-ads/campaign-stats/id/${id}?startDate=${startStr}&endDate=${endStr}`, {
+            method: 'GET',
+            accessToken
         })
     ]);
 
-    const adsData = await adsRes.json();
-    const internalStats = await internalRes.json();
-
-    const googleResults = adsData.results || [];
+    const googleResults = adsData?.results || [];
+    const safeInternalStats = Array.isArray(internalStats) ? internalStats : [];
 
     // Fazendo o merge omitindo o dia do Google Ads
     return googleResults.map((adItem: any) => {
@@ -41,7 +40,7 @@ export async function fetchCombinedMetrics(id: string, startDate: Date | null, e
         const monthKey = adItem.segments.month.substring(0, 7);
 
         // Procura na sua lista do Spring Boot pelo mês correspondente
-        const match = internalStats.find((s: any) => s.referenceDate === monthKey);
+        const match = safeInternalStats.find((s: any) => s.referenceDate === monthKey);
 
         return {
             month: monthKey, // Agora exposto apenas como YYYY-MM
@@ -53,4 +52,53 @@ export async function fetchCombinedMetrics(id: string, startDate: Date | null, e
             hasInternalData: !!match
         };
     });
+}
+
+export async function fetchMonthlyChartMetrics(accessToken: string, startDate: Date, endDate: Date) {
+    const startStr = format(startDate, "yyyy-MM-dd");
+    const endStr = format(endDate, "yyyy-MM-dd");
+
+    const query = `SELECT metrics.clicks, metrics.impressions, metrics.average_cpc, metrics.cost_micros, segments.month FROM customer WHERE segments.date BETWEEN '${startStr}' AND '${endStr}'`;
+
+    const json = await apiFetch('/google-ads/search', {
+        method: "POST",
+        accessToken,
+        body: { query },
+    });
+
+    return json?.results || [];
+}
+
+export async function fetchCampaignsWithMetrics(accessToken: string, startDate: Date | null, endDate: Date | null) {
+    let dateFilter = "";
+    if (startDate && endDate) {
+        const startStr = format(startDate, "yyyy-MM-dd");
+        const endStr = format(endDate, "yyyy-MM-dd");
+        dateFilter = ` AND segments.date BETWEEN '${startStr}' AND '${endStr}'`;
+    }
+
+    const query = `SELECT campaign.id, campaign.name, campaign.status, metrics.clicks, metrics.impressions, metrics.average_cpc, metrics.cost_micros FROM campaign WHERE campaign.status != 'REMOVED'${dateFilter}`;
+
+    const data = await apiFetch('/google-ads/search', {
+        method: 'POST',
+        accessToken,
+        body: { query }
+    });
+
+    return data?.results || [];
+}
+
+export async function fetchGeneralMetrics(accessToken: string, startDate: Date | null, endDate: Date | null) {
+    let query = "SELECT metrics.clicks, metrics.impressions, metrics.average_cpc, metrics.cost_micros FROM customer";
+    if (startDate && endDate) {
+        query = `SELECT metrics.clicks, metrics.impressions, metrics.average_cpc, metrics.cost_micros FROM customer WHERE segments.date BETWEEN '${format(startDate, "yyyy-MM-dd")}' AND '${format(endDate, "yyyy-MM-dd")}'`;
+    }
+
+    const data = await apiFetch('/google-ads/search', {
+        method: 'POST',
+        accessToken,
+        body: { query }
+    });
+
+    return data?.results?.[0]?.metrics || null;
 }
