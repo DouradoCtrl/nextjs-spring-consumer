@@ -29,7 +29,7 @@ import { cn } from "@/lib/utils";
 import { QuickFilters } from "@/components/quick-filters";
 import { AdvancedFilters } from "@/components/advanced-filters";
 import { ManualMetricsModal } from "@/components/manual-metrics-modal";
-import { fetchCampaignInfo, fetchCombinedMetrics } from "@/services/campaign-service";
+import { fetchCampaignInfo, fetchCombinedMetrics, upsertCampaignMetrics } from "@/services/campaign-service";
 import { formatCurrency, formatNumber, formatPercent, getStatusText, getStatusColor } from "@/lib/format-utils";
 
 interface PageProps {
@@ -55,7 +55,7 @@ export default function CampaignDetailsPage({ params }: PageProps) {
   const { id } = use(params);
   const { data: session } = useSession();
 
-  // Estados dos filtros principais - null indica todo o período por padrão
+  // Estados dos filtros principais - null indica todo o perodo por padro
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
 
@@ -108,7 +108,7 @@ export default function CampaignDetailsPage({ params }: PageProps) {
       const combinedMetrics = await fetchCombinedMetrics(id, startDate, endDate, accessToken);
       setResults(combinedMetrics || []);
     } catch (error) {
-      console.error("Erro ao buscar métricas da campanha:", error);
+      console.error("Erro ao buscar mtricas da campanha:", error);
       setResults([]);
     } finally {
       setLoadingMetrics(false);
@@ -131,6 +131,27 @@ export default function CampaignDetailsPage({ params }: PageProps) {
     }
   }, [id, session, startDate, endDate]);
 
+  // ADICIONADO: Função para lidar com a submissão das métricas manuais e recarregar a tabela
+  const handleManualMetricsSubmit = async (formData: { id: string; leads: number; sales: number }) => {
+    const accessToken = (session as { accessToken?: string })?.accessToken;
+    if (!accessToken || !selectedManualMetricsRow) return;
+
+    try {
+      await upsertCampaignMetrics({
+        campaignId: formData.id,
+        month: selectedManualMetricsRow.month,
+        leads: formData.leads,
+        sales: formData.sales,
+        isUpdate: selectedManualMetricsRow.isUpdate,
+        accessToken,
+      });
+
+      void loadCampaignMetrics();
+    } catch (error) {
+      console.error("Erro ao salvar mtricas manuais:", error);
+    }
+  };
+
   // Totais agregados (Single Pass)
   let totalClicks = 0;
   let totalLeads = 0;
@@ -148,8 +169,8 @@ export default function CampaignDetailsPage({ params }: PageProps) {
 
   const avgCtr = totalImpressions > 0 ? totalClicks / totalImpressions : 0;
   const avgCpm = totalImpressions > 0 ? (totalCostMicros / totalImpressions) * 1000 : 0;
-  
-  // Usar leads para o CPL, ou sales se quiser CPA de vendas. Assumindo leads como primário.
+
+  // Usar leads para o CPL, ou sales se quiser CPA de vendas. Assumindo leads como primrio.
   const cplGeral = totalLeads > 0 ? totalCostMicros / totalLeads : 0;
 
   return (
@@ -157,7 +178,7 @@ export default function CampaignDetailsPage({ params }: PageProps) {
         <Header>
           <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto py-1 max-w-full no-scrollbar">
             <div className="ml-2 text-xs font-medium text-muted-foreground flex items-center bg-muted/50 px-3 py-1.5 rounded-md border whitespace-nowrap shrink-0">
-              {startDate && endDate ? `${format(startDate, "dd/MM/yyyy")} a ${format(endDate, "dd/MM/yyyy")}` : "Todo o Período"}
+              {startDate && endDate ? `${format(startDate, "dd/MM/yyyy")} a ${format(endDate, "dd/MM/yyyy")}` : "Todo o Perodo"}
             </div>
 
             <QuickFilters
@@ -181,14 +202,14 @@ export default function CampaignDetailsPage({ params }: PageProps) {
 
         <div className="flex flex-1 flex-col p-4 md:p-6 lg:p-8 gap-6">
 
-          {/* Cabeçalho da página (Título) */}
+          {/* Cabealho da pgina (Ttulo) */}
           <div className="flex flex-col gap-4">
             <div>
               <h1 className="text-3xl font-bold tracking-tight">
                 {loadingInfo && !campaignInfo ? (
                     <Skeleton className="h-9 w-64" />
                 ) : (
-                    campaignInfo?.name || "Campanha não encontrada"
+                    campaignInfo?.name || "Campanha no encontrada"
                 )}
               </h1>
               <p className="text-muted-foreground mt-2 flex items-center gap-2">
@@ -211,7 +232,7 @@ export default function CampaignDetailsPage({ params }: PageProps) {
               <CardHeader className="pb-2">
                 <CardDescription className="flex items-center gap-2 font-medium">
                   <Eye className="h-4 w-4 text-orange-500" />
-                  Total de Impressões
+                  Total de Impresses
                 </CardDescription>
                 <CardTitle className="text-4xl text-orange-600 dark:text-orange-500">
                   {loadingMetrics ? <Skeleton className="h-10 w-24" /> : formatNumber(totalImpressions)}
@@ -267,7 +288,7 @@ export default function CampaignDetailsPage({ params }: PageProps) {
                 </CardTitle>
               </CardHeader>
             </Card>
-            
+
             <Card>
               <CardHeader className="pb-2">
                 <CardDescription className="flex items-center gap-2 font-medium">
@@ -340,11 +361,11 @@ export default function CampaignDetailsPage({ params }: PageProps) {
                       const sales = result.sales || 0;
                       const hasInternalData = result.hasInternalData;
                       const costPerConversionValid = leads > 0;
-                      
+
                       const rowClicks = result.clicks || 0;
                       const rowImpressions = result.impressions || 0;
                       const rowCostMicros = result.costMicros || 0;
-                      
+
                       const rowCtr = rowImpressions > 0 ? rowClicks / rowImpressions : 0;
                       const rowCpm = rowImpressions > 0 ? (rowCostMicros / rowImpressions) * 1000 : 0;
                       const rowCpl = leads > 0 ? rowCostMicros / leads : 0;
@@ -380,34 +401,34 @@ export default function CampaignDetailsPage({ params }: PageProps) {
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" className="w-40">
                                   <DropdownMenuItem
-                                    onClick={() =>
-                                      setSelectedRowMetrics({
-                                        month: result.month,
-                                        impressions: rowImpressions,
-                                        clicks: rowClicks,
-                                        ctr: rowCtr,
-                                        conversions: leads,
-                                        sales: sales,
-                                        costPerConversion: rowCpl,
-                                        costPerConversionValid,
-                                        averageCpc: rowCpc,
-                                        cpm: rowCpm,
-                                        costMicros: rowCostMicros,
-                                      })
-                                    }
+                                      onClick={() =>
+                                          setSelectedRowMetrics({
+                                            month: result.month,
+                                            impressions: rowImpressions,
+                                            clicks: rowClicks,
+                                            ctr: rowCtr,
+                                            conversions: leads,
+                                            sales: sales,
+                                            costPerConversion: rowCpl,
+                                            costPerConversionValid,
+                                            averageCpc: rowCpc,
+                                            cpm: rowCpm,
+                                            costMicros: rowCostMicros,
+                                          })
+                                      }
                                   >
                                     <Eye/>
                                     Detalhes
                                   </DropdownMenuItem>
                                   <DropdownMenuItem
-                                    onClick={() =>
-                                      setSelectedManualMetricsRow({
-                                        month: result.month,
-                                        initialLeads: leads,
-                                        initialSales: sales,
-                                        isUpdate: hasInternalData,
-                                      })
-                                    }
+                                      onClick={() =>
+                                          setSelectedManualMetricsRow({
+                                            month: result.month,
+                                            initialLeads: leads,
+                                            initialSales: sales,
+                                            isUpdate: hasInternalData,
+                                          })
+                                      }
                                   >
                                     <SquarePen />
                                     Métricas
@@ -447,38 +468,39 @@ export default function CampaignDetailsPage({ params }: PageProps) {
 
           {/* Modal de Detalhes */}
           {selectedRowMetrics && (
-            <MetricsDetailsModal
-              month={selectedRowMetrics.month}
-              impressions={selectedRowMetrics.impressions}
-              clicks={selectedRowMetrics.clicks}
-              ctr={selectedRowMetrics.ctr}
-              conversions={selectedRowMetrics.conversions}
-              sales={selectedRowMetrics.sales}
-              costPerConversion={selectedRowMetrics.costPerConversion}
-              costPerConversionValid={selectedRowMetrics.costPerConversionValid}
-              averageCpc={selectedRowMetrics.averageCpc}
-              cpm={selectedRowMetrics.cpm}
-              costMicros={selectedRowMetrics.costMicros}
-              formatCurrency={formatCurrency}
-              formatNumber={formatNumber}
-              formatPercent={formatPercent}
-              open={!!selectedRowMetrics}
-              onOpenChange={(open: boolean) => !open && setSelectedRowMetrics(null)}
-            />
+              <MetricsDetailsModal
+                  month={selectedRowMetrics.month}
+                  impressions={selectedRowMetrics.impressions}
+                  clicks={selectedRowMetrics.clicks}
+                  ctr={selectedRowMetrics.ctr}
+                  conversions={selectedRowMetrics.conversions}
+                  sales={selectedRowMetrics.sales}
+                  costPerConversion={selectedRowMetrics.costPerConversion}
+                  costPerConversionValid={selectedRowMetrics.costPerConversionValid}
+                  averageCpc={selectedRowMetrics.averageCpc}
+                  cpm={selectedRowMetrics.cpm}
+                  costMicros={selectedRowMetrics.costMicros}
+                  formatCurrency={formatCurrency}
+                  formatNumber={formatNumber}
+                  formatPercent={formatPercent}
+                  open={!!selectedRowMetrics}
+                  onOpenChange={(open: boolean) => !open && setSelectedRowMetrics(null)}
+              />
           )}
 
           {/* Modal de Métricas Manuais */}
           {selectedManualMetricsRow && campaignInfo && (
-            <ManualMetricsModal
-              id={id}
-              month={selectedManualMetricsRow.month}
-              campaignName={campaignInfo.name}
-              initialLeads={selectedManualMetricsRow.initialLeads}
-              initialSales={selectedManualMetricsRow.initialSales}
-              isUpdate={selectedManualMetricsRow.isUpdate}
-              open={!!selectedManualMetricsRow}
-              onOpenChange={(open: boolean) => !open && setSelectedManualMetricsRow(null)}
-            />
+              <ManualMetricsModal
+                  id={id}
+                  month={selectedManualMetricsRow.month}
+                  campaignName={campaignInfo.name}
+                  initialLeads={selectedManualMetricsRow.initialLeads}
+                  initialSales={selectedManualMetricsRow.initialSales}
+                  isUpdate={selectedManualMetricsRow.isUpdate}
+                  open={!!selectedManualMetricsRow}
+                  onOpenChange={(open: boolean) => !open && setSelectedManualMetricsRow(null)}
+                  onSubmit={handleManualMetricsSubmit} // ADICIONADO: Prop onSubmit conectada à service dinâmica
+              />
           )}
         </div>
       </div>
