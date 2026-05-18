@@ -29,20 +29,19 @@ interface ManualMetricsModalProps {
 }
 
 export function ManualMetricsModal({
-                                     id,
-                                     month,
-                                     campaignName,
-                                     initialLeads = 0,
-                                     initialSales = 0,
-                                     isUpdate = false,
-                                     open,
-                                     onOpenChange,
-                                   }: ManualMetricsModalProps) {
-  // Estados para controlar os números
+    id,
+    month,
+    campaignName,
+    initialLeads = 0,
+    initialSales = 0,
+    isUpdate = false,
+    open,
+    onOpenChange,
+}: ManualMetricsModalProps) {
+
   const [leads, setLeads] = useState(initialLeads);
   const [vendas, setVendas] = useState(initialSales);
 
-  // Atualizar os estados internos caso os valores iniciais mudem
   useEffect(() => {
     if (open) {
       setLeads(initialLeads);
@@ -59,7 +58,6 @@ export function ManualMetricsModal({
     onOpenChange(false);
   };
 
-  // Classe utilitária para esconder as setas nativas do HTML
   const hideSpinnersClass = "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none";
 
   return (
